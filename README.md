@@ -4,7 +4,7 @@ A simple, modern job board application built with Next.js and Supabase where com
 
 ## 🚀 Live Demo
 
-[Live Application URL] - *Will be updated after deployment*
+[Live Application URL] - https://https://mini-job-board-rho.vercel.app
 
 ## ✨ Features
 
