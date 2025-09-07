@@ -14,7 +14,8 @@ export default function AuthPage() {
 
   useEffect(() => {
     // Set the origin only on the client side
-    setOrigin(window.location.origin)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+    setOrigin(siteUrl)
   }, [])
 
   useEffect(() => {
