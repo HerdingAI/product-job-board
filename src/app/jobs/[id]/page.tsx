@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, type Job } from '@/lib/supabase'
 import { mockJobs, isSupabaseConfigured } from '@/lib/mockData'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, MapPin, Clock, Building, Briefcase } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function JobDetailPage() {
@@ -16,13 +16,7 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [usingMockData, setUsingMockData] = useState(false)
 
-  useEffect(() => {
-    if (params.id) {
-      fetchJob(params.id as string)
-    }
-  }, [params.id])
-
-  const fetchJob = async (id: string) => {
+  const fetchJob = useCallback(async (id: string) => {
     setLoading(true)
     
     if (!isSupabaseConfigured()) {
@@ -37,7 +31,8 @@ export default function JobDetailPage() {
       setLoading(false)
       return
     }
-
+    
+    
     // Use Supabase if configured
     setUsingMockData(false)
     const { data, error } = await supabase
@@ -53,7 +48,13 @@ export default function JobDetailPage() {
       setJob(data)
     }
     setLoading(false)
-  }
+  }, [router])
+
+  useEffect(() => {
+    if (params.id) {
+      fetchJob(params.id as string)
+    }
+  }, [params.id, fetchJob])
 
   if (loading) {
     return (
@@ -187,7 +188,7 @@ export default function JobDetailPage() {
               <div className="mb-6">
                 <h3 className="text-base font-medium text-gray-900 mb-2">Company Introduction:</h3>
                 <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                  We exist to wow our customers. We know we're doing the right thing when we hear our customers say, "How did I ever live without {job.company_name}?" Born out of an obsession to make shopping, eating, and living easier than ever, we're collectively disrupting the multi-billion-dollar commerce industry. We are one of the fastest-growing retail companies that established an unparalleled reputation for being a leading and reliable force in the commerce industry.
+                  We exist to wow our customers. We know we&apos;re doing the right thing when we hear our customers say, &ldquo;How did I ever live without {job.company_name}?&rdquo; Born out of an obsession to make shopping, eating, and living easier than ever, we&apos;re collectively disrupting the multi-billion-dollar commerce industry. We are one of the fastest-growing retail companies that established an unparalleled reputation for being a leading and reliable force in the commerce industry.
                 </p>
                 <p className="text-sm text-gray-700 leading-relaxed">
                   We are proud to have the best of both worlds — a startup culture with the resources of a

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import { supabase, type Job } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/Button'
 
@@ -23,17 +23,7 @@ export default function EditJobPage() {
   const [loading, setLoading] = useState(true)
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<JobFormData>()
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth')
-      return
-    }
-    if (params.id) {
-      fetchJob(params.id as string)
-    }
-  }, [user, params.id, router])
-
-  const fetchJob = async (id: string) => {
+  const fetchJob = useCallback(async (id: string) => {
     setLoading(true)
     const { data, error } = await supabase
       .from('jobs')
@@ -54,7 +44,17 @@ export default function EditJobPage() {
       setValue('job_type', data.job_type)
     }
     setLoading(false)
-  }
+  }, [user?.id, setValue, router])
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth')
+      return
+    }
+    if (params.id) {
+      fetchJob(params.id as string)
+    }
+  }, [user, params.id, router, fetchJob])
 
   const onSubmit = async (data: JobFormData) => {
     setSubmitting(true)

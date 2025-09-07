@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase, type Job } from '@/lib/supabase'
@@ -15,15 +15,7 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/auth')
-      return
-    }
-    fetchUserJobs()
-  }, [user, router])
-
-  const fetchUserJobs = async () => {
+  const fetchUserJobs = useCallback(async () => {
     if (!user) return
     
     setLoading(true)
@@ -39,7 +31,15 @@ export default function DashboardPage() {
       setJobs(data || [])
     }
     setLoading(false)
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth')
+      return
+    }
+    fetchUserJobs()
+  }, [user, router, fetchUserJobs])
 
   const handleDeleteJob = async (jobId: string) => {
     if (!confirm('Are you sure you want to delete this job posting?')) {

@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { supabase, type Job } from '@/lib/supabase'
 import { mockJobs, isSupabaseConfigured } from '@/lib/mockData'
-import { Button } from '@/components/ui/Button'
-import { Search, MapPin, Clock, Building } from 'lucide-react'
+import { Search, MapPin, Clock } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function HomePage() {
@@ -15,11 +14,7 @@ export default function HomePage() {
   const [jobTypeFilter, setJobTypeFilter] = useState('')
   const [usingMockData, setUsingMockData] = useState(false)
 
-  useEffect(() => {
-    fetchJobs()
-  }, [locationFilter, jobTypeFilter])
-
-  const fetchJobs = async () => {
+  const fetchJobs = useCallback(async () => {
     setLoading(true)
     
     if (!isSupabaseConfigured()) {
@@ -65,7 +60,11 @@ export default function HomePage() {
       setJobs(data || [])
     }
     setLoading(false)
-  }
+  }, [locationFilter, jobTypeFilter])
+
+  useEffect(() => {
+    fetchJobs()
+  }, [fetchJobs])
 
   const handleLocationFilter = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocationFilter(e.target.value)
