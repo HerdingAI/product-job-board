@@ -173,13 +173,14 @@ export default function HomePage() {
   const handleFilterChange = useCallback((newFilters: Partial<FilterState>) => {
     setFilters(prevFilters => {
       const updatedFilters = { ...prevFilters, ...newFilters }
-      
-      // Sync with URL
-      updateUrl(updatedFilters)
-      
       return updatedFilters
     })
-  }, [updateUrl])
+  }, [])
+
+  // Use useEffect to sync URL after filters change
+  useEffect(() => {
+    updateUrl(filters)
+  }, [filters, updateUrl])
 
   // Function to fetch actual filter values from the database
   const fetchActualFilterValues = useCallback(async () => {

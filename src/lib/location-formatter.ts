@@ -104,29 +104,8 @@ export function formatManagementInfo(jobData: any): { tags: string[] } {
     tags.push(`${jobData.team_size_indirect} Indirect Reports`);
   }
   
-  // Parse KPI ownership array
-  if (jobData.kpi_ownership) {
-    let kpis: string[] = [];
-    try {
-      kpis = typeof jobData.kpi_ownership === 'string' 
-        ? JSON.parse(jobData.kpi_ownership) 
-        : jobData.kpi_ownership;
-    } catch (e) {
-      console.warn('Failed to parse kpi_ownership:', jobData.kpi_ownership);
-      // If it's a string but not JSON, treat as single value
-      if (typeof jobData.kpi_ownership === 'string') {
-        kpis = [jobData.kpi_ownership];
-      }
-    }
-    
-    if (Array.isArray(kpis)) {
-      kpis.forEach(kpi => {
-        if (kpi) {
-          tags.push(formatCamelCase(kpi));
-        }
-      });
-    }
-  }
+  // Parse KPI ownership array - REMOVED to avoid duplication with KPI OWNERSHIP section
+  // KPI data is handled separately in the dedicated KPI OWNERSHIP section
   
   return { tags: tags.filter(Boolean) };
 }

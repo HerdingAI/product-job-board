@@ -10,7 +10,7 @@ import { CompanySidebar } from '@/components/CompanySidebar'
 import { formatCamelCase, getFormattedLocation } from '@/lib/tag-extraction'
 import { formatJobDate } from '@/lib/data-mapper'
 import { TagBadge } from '@/components/ui/TagBadge'
-import { ArrowLeft, MapPin, Clock, Building, DollarSign, ExternalLink, Calendar, Briefcase } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Building, ExternalLink, Calendar, Briefcase } from 'lucide-react'
 
 export default function JobDetailPage() {
   const params = useParams()
@@ -152,8 +152,7 @@ export default function JobDetailPage() {
               </div>
               <div className="text-right">
                 {(jobData.salary_min || jobData.salary_max) && (
-                  <div className="flex items-center text-green-600 font-bold text-xl mb-2">
-                    <DollarSign className="h-6 w-6 mr-1" />
+                  <div className="text-green-600 font-bold text-xl mb-2">
                     <span>{formatSalary(jobData.salary_min, jobData.salary_max, jobData.salary_currency)}</span>
                   </div>
                 )}
