@@ -44,7 +44,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
         elements.push(
           <div key={key++} className="flex items-start mb-2">
             <span className="text-blue-400 mr-2 mt-1 flex-shrink-0">•</span>
-            <span className="text-gray-300 leading-relaxed">{renderInlineFormatting(bulletText)}</span>
+            <span className="text-gray-300 leading-relaxed text-sm sm:text-base">{renderInlineFormatting(bulletText)}</span>
           </div>
         );
       }
@@ -52,7 +52,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
       else if (line.startsWith('**') && line.endsWith('**')) {
         const headerText = line.slice(2, -2);
         elements.push(
-          <h3 key={key++} className="text-lg font-semibold text-white mt-6 mb-3">
+          <h3 key={key++} className="text-base sm:text-lg font-semibold text-white mt-4 sm:mt-6 mb-2 sm:mb-3">
             {headerText}
           </h3>
         );
@@ -60,7 +60,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
       // Regular paragraph text
       else {
         elements.push(
-          <p key={key++} className="text-gray-300 leading-relaxed mb-4">
+          <p key={key++} className="text-gray-300 leading-relaxed mb-3 sm:mb-4 text-sm sm:text-base">
             {renderInlineFormatting(line)}
           </p>
         );
@@ -80,7 +80,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
     return parts.map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         const boldText = part.slice(2, -2);
-        return <strong key={index} className="font-semibold">{boldText}</strong>;
+        return <strong key={index} className="font-semibold text-white">{boldText}</strong>;
       }
       
       // Check for italic markers (*text*)
@@ -89,7 +89,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
         return italicParts.map((italicPart, italicIndex) => {
           if (italicPart.startsWith('*') && italicPart.endsWith('*') && !italicPart.startsWith('**')) {
             const italicText = italicPart.slice(1, -1);
-            return <em key={`${index}-${italicIndex}`} className="italic">{italicText}</em>;
+            return <em key={`${index}-${italicIndex}`} className="italic text-gray-200">{italicText}</em>;
           }
           return italicPart;
         });
@@ -102,11 +102,11 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
   // If we have structured sections, render them organized
   if (parsedContent.hasStructure && (sections.about || sections.responsibilities?.length || sections.requirements?.length)) {
     return (
-      <div className={`prose max-w-none ${className}`}> 
+      <div className={`max-w-none ${className} [&_*]:text-gray-300`}> 
         {sections.about && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">About the Role</h3>
-            <div className="text-gray-700 leading-relaxed">
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">About the Role</h3>
+            <div className="text-gray-300 leading-relaxed text-sm sm:text-base">
               {renderFormattedText(sections.about)}
             </div>
           </div>
@@ -114,12 +114,12 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
 
         {sections.responsibilities && sections.responsibilities.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Responsibilities</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Responsibilities</h3>
             <div className="space-y-2">
               {sections.responsibilities.map((responsibility, index) => (
                 <div key={index} className="flex items-start">
-                  <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
-                  <span className="text-gray-700 leading-relaxed">{responsibility}</span>
+                  <span className="text-blue-400 mr-2 mt-1 flex-shrink-0">•</span>
+                  <span className="text-gray-300 leading-relaxed text-sm sm:text-base">{responsibility}</span>
                 </div>
               ))}
             </div>
@@ -128,12 +128,12 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
 
         {sections.requirements && sections.requirements.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Requirements</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Requirements</h3>
             <div className="space-y-2">
               {sections.requirements.map((requirement, index) => (
                 <div key={index} className="flex items-start">
-                  <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
-                  <span className="text-gray-700 leading-relaxed">{requirement}</span>
+                  <span className="text-blue-400 mr-2 mt-1 flex-shrink-0">•</span>
+                  <span className="text-gray-300 leading-relaxed text-sm sm:text-base">{requirement}</span>
                 </div>
               ))}
             </div>
@@ -142,12 +142,12 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
 
         {sections.benefits && sections.benefits.length > 0 && (
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Benefits</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">Benefits</h3>
             <div className="space-y-2">
               {sections.benefits.map((benefit, index) => (
                 <div key={index} className="flex items-start">
-                  <span className="text-green-600 mr-2 mt-1 flex-shrink-0">•</span>
-                  <span className="text-gray-700 leading-relaxed">{benefit}</span>
+                  <span className="text-emerald-400 mr-2 mt-1 flex-shrink-0">•</span>
+                  <span className="text-gray-300 leading-relaxed text-sm sm:text-base">{benefit}</span>
                 </div>
               ))}
             </div>
@@ -156,7 +156,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
 
         {sections.other && (
           <div className="mb-6">
-            <div className="text-gray-700">
+            <div className="text-gray-300 text-sm sm:text-base">
               {renderFormattedText(sections.other)}
             </div>
           </div>
@@ -167,8 +167,8 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
 
   // If no clear structure, render the clean text with formatting
   return (
-    <div className={`prose max-w-none ${className}`}> 
-      <div className="text-gray-700">
+    <div className={`max-w-none ${className}`}> 
+      <div className="text-gray-300 text-sm sm:text-base [&_*]:text-gray-300">
         {renderFormattedText(parsedContent.cleanText)}
       </div>
     </div>

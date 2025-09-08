@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { mapSupabaseJobToAppJob } from '@/lib/data-mapper'
 import { AppJob, FilterState, Tag } from '@/lib/types'
-import { Search, MapPin, Clock, Building, DollarSign, Sliders } from 'lucide-react'
+import { Search, MapPin, Clock, Building, Sliders } from 'lucide-react'
 import { formatJobDate, formatSalaryRange } from '@/lib/data-mapper'
 import { AdvancedFilterSidebar } from '@/components/AdvancedFilterSidebar'
-import { searchJobs, highlight } from '@/lib/search'
+import { searchJobs, highlightSafe, highlight } from '@/lib/search'
+import { extractCleanTextPreview } from '@/lib/html-parser'
 import type { SupabaseJob } from '@/lib/supabase'
 import { tagToUrlParam, tagFromUrlParam } from '@/lib/tag-parser'
 
@@ -19,9 +20,12 @@ export default function HomePage() {
   
   const [jobs, setJobs] = useState<AppJob[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [pagination, setPagination] = useState({ page: 1, limit: 50, hasNextPage: false })
+  const [totalLoaded, setTotalLoaded] = useState(0)
+  const [canLoadMore, setCanLoadMore] = useState(true)
   const [actualFilterValues, setActualFilterValues] = useState<{
     seniority: string[]
     location: string[]
@@ -297,6 +301,8 @@ export default function HomePage() {
             )
           }
           setJobs(mapped)
+          setTotalLoaded(mapped.length)
+          setCanLoadMore(mapped.length < 1000 && (result.pagination?.hasNextPage || false))
           setPagination({ page, limit, hasNextPage: result.pagination?.hasNextPage || false })
         } catch (e) {
           console.warn('[search] RPC failed, falling back to simple filter query:', e)
@@ -342,6 +348,8 @@ export default function HomePage() {
             )
           }
           setJobs(mapped)
+          setTotalLoaded(mapped.length)
+          setCanLoadMore(mapped.length < 1000 && (data?.length || 0) === limit)
           // Best-effort pagination signal (if page returns full page, assume maybe next)
           setPagination({ page, limit, hasNextPage: (data?.length || 0) === limit })
         }
@@ -388,6 +396,8 @@ export default function HomePage() {
           )
         }
         setJobs(mapped)
+        setTotalLoaded(mapped.length)
+        setCanLoadMore(mapped.length < 1000 && mapped.length >= (filters.resultsPerPage || 50))
         setPagination({ page: 1, limit: filters.resultsPerPage || 50, hasNextPage: false })
       }
       
@@ -401,7 +411,119 @@ export default function HomePage() {
     }
   }, [filters])
 
+  // Load more jobs function - appends to existing jobs
+  const loadMoreJobs = useCallback(async () => {
+    if (!canLoadMore || loadingMore || totalLoaded >= 1000) return
+    
+    setLoadingMore(true)
+    setError(null)
+    
+    try {
+      const nextPage = pagination.page + 1
+      const limit = pagination.limit
+      
+      console.log('=== LOAD MORE JOBS ===')
+      console.log('Loading page:', nextPage, 'Current total:', totalLoaded)
+      
+      const shouldUseSearch = Boolean(filters.search && filters.search.trim().length > 0)
+      
+      if (shouldUseSearch) {
+        try {
+          const result = await searchJobs({
+            searchTerm: filters.search!.trim(),
+            filters,
+            page: nextPage,
+            limit,
+          })
+          const rpcRows = (result.jobs || []) as Array<SupabaseJob & { search_rank?: number }>
+          let newJobs = rpcRows.map(row => mapSupabaseJobToAppJob(row))
+          
+          if (filters.activeTags && filters.activeTags.length > 0) {
+            newJobs = newJobs.filter(job =>
+              filters.activeTags!.every(selectedTag =>
+                job.tags.some(jobTag => jobTag.label === selectedTag.label && jobTag.category === selectedTag.category)
+              )
+            )
+          }
+          
+          const updatedJobs = [...jobs, ...newJobs]
+          setJobs(updatedJobs)
+          setTotalLoaded(updatedJobs.length)
+          setCanLoadMore(updatedJobs.length < 1000 && newJobs.length === limit && (result.pagination?.hasNextPage || false))
+          setPagination({ page: nextPage, limit, hasNextPage: result.pagination?.hasNextPage || false })
+          
+        } catch (e) {
+          console.warn('[loadMore] Search failed, trying regular query:', e)
+          // Fallback to regular query
+          await loadMoreWithRegularQuery(nextPage, limit)
+        }
+      } else {
+        await loadMoreWithRegularQuery(nextPage, limit)
+      }
+      
+    } catch (err) {
+      console.error('Load more error:', err)
+      setError('Failed to load more jobs. Please try again.')
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [filters, jobs, pagination, canLoadMore, loadingMore, totalLoaded])
+
+  // Helper function for regular query load more
+  const loadMoreWithRegularQuery = async (nextPage: number, limit: number) => {
+    let query = supabase
+      .from('jobs')
+      .select('*')
+      .eq('is_currently_active', true)
+      .eq('is_product_job', true)
+      .order('created_at', { ascending: false })
+      .range((nextPage - 1) * limit, nextPage * limit - 1)
+
+    // Apply all filters
+    if (filters.seniority && filters.seniority.trim()) {
+      query = query.eq('seniority_level', filters.seniority)
+    }
+    if (filters.location && filters.location.trim()) {
+      query = query.eq('location_metro', filters.location)
+    }
+    if (filters.workArrangement && filters.workArrangement.trim()) {
+      query = query.eq('work_arrangement', filters.workArrangement)
+    }
+    if (filters.companyStage?.length) query = query.in('company_stage', filters.companyStage)
+    if (filters.productLifecycle?.length) query = query.in('product_lifecycle_focus', filters.productLifecycle)
+    if (filters.productDomain?.length) query = query.in('product_domain', filters.productDomain)
+    if (filters.managementScope?.length) query = query.in('management_scope', filters.managementScope)
+    if (filters.industryVertical?.length) query = query.in('industry_vertical', filters.industryVertical)
+    if (filters.experienceBucket?.length) query = query.in('experience_bucket', filters.experienceBucket)
+    if (filters.domainExpertise?.length) query = query.in('domain_expertise', filters.domainExpertise)
+    if (filters.salaryMin) query = query.gte('salary_min', filters.salaryMin)
+    if (filters.salaryMax) query = query.lte('salary_max', filters.salaryMax)
+
+    const { data, error: fetchError } = await query
+    if (fetchError) throw fetchError
+    
+    let newJobs = (data || []).map(mapSupabaseJobToAppJob)
+    if (filters.activeTags && filters.activeTags.length > 0) {
+      newJobs = newJobs.filter(job =>
+        filters.activeTags!.every(selectedTag =>
+          job.tags.some(jobTag => jobTag.label === selectedTag.label && jobTag.category === selectedTag.category)
+        )
+      )
+    }
+    
+    const updatedJobs = [...jobs, ...newJobs]
+    setJobs(updatedJobs)
+    setTotalLoaded(updatedJobs.length)
+    setCanLoadMore(updatedJobs.length < 1000 && newJobs.length === limit)
+    setPagination({ page: nextPage, limit, hasNextPage: newJobs.length === limit })
+  }
+
   useEffect(() => {
+    // Reset pagination and load more state when filters change
+    setTotalLoaded(0)
+    setCanLoadMore(true)
+    setPagination({ page: 1, limit: 50, hasNextPage: false })
+    
     // Debounce the fetchJobs call to avoid excessive API calls during typing
     const timeoutId = setTimeout(() => {
       fetchJobs()
@@ -412,11 +534,11 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading product jobs...</p>
+      <div className="min-h-screen bg-black">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8">
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-300 text-sm sm:text-base">Loading product jobs...</p>
           </div>
         </div>
       </div>
@@ -425,13 +547,13 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <p className="text-red-600 mb-4">{error}</p>
+      <div className="min-h-screen bg-black">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8">
+          <div className="text-center py-8 sm:py-12">
+            <p className="text-red-400 mb-4 text-sm sm:text-base">{error}</p>
             <button 
               onClick={fetchJobs}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm sm:text-base"
             >
               Try Again
             </button>
@@ -453,56 +575,56 @@ export default function HomePage() {
         actualFilterValues={actualFilterValues}
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3 tracking-tight">
             Product Management Jobs
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed px-4 sm:px-0">
             Discover your next product role from top companies worldwide
           </p>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="relative group">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 transition-colors group-focus-within:text-primary-500" />
+            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 transition-colors group-focus-within:text-primary-500" />
             <input
               type="text"
               placeholder="Search jobs by title, company, or skills..."
               value={filters.search || ''}
               onChange={(e) => handleFilterChange({ search: e.target.value })}
-              className="input-modern w-full pl-12 pr-12 py-4 text-base placeholder-gray-500 focus:placeholder-gray-400"
+              className="input-modern w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 text-sm sm:text-base placeholder-gray-500 focus:placeholder-gray-400"
             />
             {filters.search?.trim() && (
               <button
                 onClick={() => handleFilterChange({ search: '' })}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
+                className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
                 aria-label="Clear search"
               >
-                <span className="text-lg">×</span>
+                <span className="text-base sm:text-lg">×</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Filter Bar */}
-        <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 sm:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="relative">
               <select
                 value={filters.seniority || ''}
                 onChange={(e) => handleFilterChange({ seniority: e.target.value })}
-                className="input-modern appearance-none w-full pr-10"
+                className="input-modern appearance-none w-full pr-8 sm:pr-10 text-sm sm:text-base"
               >
                 <option value="">All Seniority Levels</option>
                 {actualFilterValues.seniority.map(level => (
                   <option key={level} value={level}>{level}</option>
                 ))}
               </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
+                <svg className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -512,15 +634,15 @@ export default function HomePage() {
               <select
                 value={filters.location || ''}
                 onChange={(e) => handleFilterChange({ location: e.target.value })}
-                className="input-modern appearance-none w-full pr-10"
+                className="input-modern appearance-none w-full pr-8 sm:pr-10 text-sm sm:text-base"
               >
                 <option value="">All Locations</option>
                 {actualFilterValues.location.map(location => (
                   <option key={location} value={location}>{location}</option>
                 ))}
               </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
+                <svg className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -689,59 +811,66 @@ export default function HomePage() {
         </div>
 
         {/* Job List */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {jobs.map((job) => (
-            <div key={job.id} className="modern-card p-6 animate-fade-in">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex-grow">
-                  <h3 className="text-xl font-semibold text-white mb-2 leading-tight">
+            <div key={job.id} className="modern-card p-4 sm:p-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 sm:mb-4">
+                <div className="flex-grow mb-3 sm:mb-0">
+                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 leading-tight">
                     <Link href={`/jobs/${job.id}`} className="hover:text-blue-400 transition-colors duration-200">
                       <span dangerouslySetInnerHTML={{ __html: highlight(job.title, filters.search || '') }} />
                     </Link>
                   </h3>
-                  <div className="flex items-center space-x-6 text-gray-400 mb-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-6 text-gray-400 mb-3 text-sm sm:text-base">
                     <div className="flex items-center">
-                      <Building className="h-4 w-4 mr-2 text-gray-500" />
-                      <span className="font-medium text-gray-300">{job.company.name}</span>
+                      <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
+                      <span className="font-medium text-gray-300 truncate">{job.company.name}</span>
                     </div>
                     <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                      <span>
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
+                      <span className="truncate">
                         {job.location.metro || job.location.city || 
                          (job.location.isRemote ? 'Remote' : 'Location TBD')}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
                       <span>{formatJobDate(job.postedDate || job.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right ml-6">
+                <div className="flex flex-row sm:flex-col items-start sm:items-end sm:text-right sm:ml-6 space-x-3 sm:space-x-0 sm:space-y-2">
                   {formatSalaryRange(job.compensation) && (
-                    <div className="flex items-center text-emerald-400 font-semibold text-lg">
-                      <DollarSign className="h-5 w-5 mr-1" />
+                    <div className="flex items-center text-emerald-400 font-semibold text-base sm:text-lg">
                       <span>{formatSalaryRange(job.compensation)}</span>
                     </div>
                   )}
                   {job.experience.seniorityLevel && (
-                    <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800/50 ${formatSalaryRange(job.compensation) ? 'mt-2' : ''}`}>
+                    <div className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800/50 whitespace-nowrap">
                       {job.experience.seniorityLevel} Level
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Job Description Preview with optional highlighting */}
-              <p className="text-gray-300 mb-4 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: highlight(job.description, filters.search || '') }} />
+              {/* Job Description Preview with optional highlighting - Clean Text Only */}
+              <p 
+                className="text-gray-300 mb-3 sm:mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base" 
+                dangerouslySetInnerHTML={{ 
+                  __html: highlightSafe(
+                    extractCleanTextPreview(job.description, 180), 
+                    filters.search || ''
+                  ) 
+                }} 
+              />
 
               {/* Tags */}
               {job.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {job.tags.slice(0, 6).map((tag, index) => (
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                  {job.tags.slice(0, 4).map((tag, index) => (
                     <span
                       key={index}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
+                      className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
                         ${tag.category === 'core-pm' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' :
                           tag.category === 'technical' ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/50' :
                           tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
@@ -751,17 +880,17 @@ export default function HomePage() {
                       {tag.label}
                     </span>
                   ))}
-                  {job.tags.length > 6 && (
-                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800/50 text-gray-400 border border-gray-700/50">
-                      +{job.tags.length - 6} more
+                  {job.tags.length > 4 && (
+                    <span className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-gray-800/50 text-gray-400 border border-gray-700/50">
+                      +{job.tags.length - 4} more
                     </span>
                   )}
                 </div>
               )}
 
               {/* Job Meta */}
-              <div className="flex justify-between items-center pt-3 border-t border-gray-800">
-                <div className="flex space-x-4 text-sm text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-3 border-t border-gray-800 space-y-2 sm:space-y-0">
+                <div className="flex flex-wrap gap-2 text-sm text-gray-400">
                   {job.employmentType && (
                     <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-800/50 text-gray-300 text-xs font-medium">
                       {job.employmentType}
@@ -780,7 +909,7 @@ export default function HomePage() {
                 </div>
                 <Link 
                   href={`/jobs/${job.id}`}
-                  className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group"
+                  className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group self-start sm:self-auto"
                 >
                   <span>View Details</span>
                   <span className="ml-1 transition-transform duration-200 group-hover:translate-x-1">→</span>
@@ -789,6 +918,47 @@ export default function HomePage() {
             </div>
           ))}
         </div>
+
+        {/* Load More Button */}
+        {jobs.length > 0 && canLoadMore && totalLoaded < 1000 && (
+          <div className="text-center mt-8 mb-8">
+            <button
+              onClick={loadMoreJobs}
+              disabled={loadingMore}
+              className="btn-modern px-6 py-3 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center space-x-2"
+            >
+              {loadingMore ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Loading more jobs...</span>
+                </>
+              ) : (
+                <>
+                  <span>Load More Jobs</span>
+                  <span className="text-sm text-gray-300">({totalLoaded}/1000 loaded)</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Maximum Reached Message */}
+        {jobs.length > 0 && totalLoaded >= 1000 && (
+          <div className="text-center mt-8 mb-8">
+            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-blue-900/30 text-blue-300 border border-blue-800/50">
+              <span className="text-sm">Maximum of 1000 jobs loaded. Please refine your search for more specific results.</span>
+            </div>
+          </div>
+        )}
+
+        {/* No More Jobs Message */}
+        {jobs.length > 0 && !canLoadMore && totalLoaded < 1000 && (
+          <div className="text-center mt-8 mb-8">
+            <div className="inline-flex items-center px-4 py-2 rounded-lg bg-gray-800/50 text-gray-400 border border-gray-700/50">
+              <span className="text-sm">All jobs loaded ({totalLoaded} total)</span>
+            </div>
+          </div>
+        )}
 
         {/* Empty State */}
         {jobs.length === 0 && !loading && (

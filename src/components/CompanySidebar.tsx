@@ -37,8 +37,8 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
     <div className={className}>
       {/* COMPANY Section */}
       <SidebarSection title="COMPANY">
-        <div className="space-y-3">
-          <p className="font-medium text-white">{companyInfo.basicInfo.name}</p>
+        <div className="space-y-2 sm:space-y-3">
+          <p className="font-medium text-white text-sm sm:text-base">{companyInfo.basicInfo.name}</p>
           
           <div className="flex flex-wrap gap-1">
             {shouldDisplayValue(companyInfo.basicInfo.stage) && (
@@ -59,8 +59,8 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
 
       {/* EXPERIENCE Section */}
       <SidebarSection title="EXPERIENCE">
-        <div className="space-y-3">
-          <p className="text-sm text-gray-300">{experience.formatted}</p>
+        <div className="space-y-2 sm:space-y-3">
+          <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">{experience.formatted}</p>
           
           {experience.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">

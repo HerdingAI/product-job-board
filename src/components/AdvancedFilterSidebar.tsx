@@ -111,9 +111,9 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
     return (
       <button
         onClick={onToggle}
-        className="fixed left-4 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white p-3 rounded-r-lg shadow-lg hover:bg-blue-700 transition-colors z-40"
+        className="fixed left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-blue-600 text-white p-2 sm:p-3 rounded-r-lg shadow-lg hover:bg-blue-700 transition-colors z-40"
       >
-        <Sliders className="h-5 w-5" />
+        <Sliders className="h-4 w-4 sm:h-5 sm:w-5" />
       </button>
     )
   }
@@ -122,12 +122,12 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
     <>
       {/* Overlay */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+        className="fixed inset-0 bg-black bg-opacity-50 z-30"
         onClick={onToggle}
       />
       
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-80 bg-black border-r border-gray-800 shadow-2xl z-40 overflow-y-auto">
+      <div className="fixed left-0 top-0 h-full w-full sm:w-80 max-w-sm bg-black border-r border-gray-800 shadow-2xl z-40 overflow-y-auto">
         {/* Add padding for fixed header */}
         <div className="pt-16 p-6">
           {/* Header */}

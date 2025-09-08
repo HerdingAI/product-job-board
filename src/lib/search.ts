@@ -73,3 +73,53 @@ export function highlight(text: string, search: string, maxLen = 200) {
   }
   return snippet
 }
+
+/**
+ * Safe highlight function that works with clean text only
+ * Escapes any HTML in the input text before applying highlighting
+ */
+export function highlightSafe(text: string, search: string, maxLen = 200): string {
+  if (!text) return ''
+  
+  // First escape any HTML in the text to prevent XSS
+  const escapeHtml = (str: string) => 
+    str.replace(/&/g, '&amp;')
+       .replace(/</g, '&lt;')
+       .replace(/>/g, '&gt;')
+       .replace(/"/g, '&quot;')
+       .replace(/'/g, '&#39;')
+  
+  const escapedText = escapeHtml(text)
+  
+  if (!search?.trim()) {
+    return escapedText.length > maxLen ? escapedText.slice(0, maxLen) + '…' : escapedText
+  }
+  
+  const terms = search.toLowerCase().split(/\s+/).filter(Boolean)
+  const lower = escapedText.toLowerCase()
+  let idx = -1
+  
+  for (const t of terms) {
+    const i = lower.indexOf(t.toLowerCase())
+    if (i !== -1 && (idx === -1 || i < idx)) idx = i
+  }
+  
+  if (idx === -1) {
+    return escapedText.length > maxLen ? escapedText.slice(0, maxLen) + '…' : escapedText
+  }
+  
+  const start = Math.max(0, idx - 50)
+  const end = Math.min(escapedText.length, start + maxLen)
+  let snippet = escapedText.slice(start, end)
+  
+  if (start > 0) snippet = '…' + snippet
+  if (end < escapedText.length) snippet = snippet + '…'
+  
+  // Apply highlighting to escaped text
+  for (const t of terms) {
+    const regex = new RegExp(`(${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    snippet = snippet.replace(regex, '<mark class="bg-yellow-200 text-black px-1 rounded">$1</mark>')
+  }
+  
+  return snippet
+}

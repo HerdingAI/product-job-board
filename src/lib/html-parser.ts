@@ -325,6 +325,48 @@ function cleanText(text: string): string {
 }
 
 /**
+ * Extracts clean, text-only content from HTML for previews (like job cards)
+ * Removes all HTML tags, images, and other non-text content
+ */
+export function extractCleanTextPreview(htmlContent: string, maxLength = 200): string {
+  if (!htmlContent) return '';
+  
+  // Create a temporary DOM element to parse HTML safely
+  if (typeof window !== 'undefined') {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    
+    // Remove any script, style, img, video, etc. tags
+    const unwantedElements = tempDiv.querySelectorAll('script, style, img, video, audio, iframe, object, embed');
+    unwantedElements.forEach(el => el.remove());
+    
+    // Get clean text content
+    let cleanContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Clean and limit the text
+    cleanContent = cleanText(cleanContent);
+    
+    if (cleanContent.length > maxLength) {
+      cleanContent = cleanContent.slice(0, maxLength).trim() + '…';
+    }
+    
+    return cleanContent;
+  }
+  
+  // Server-side fallback: use regex to strip HTML tags
+  const textOnly = htmlContent
+    .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove scripts
+    .replace(/<style[^>]*>.*?<\/style>/gi, '') // Remove styles
+    .replace(/<img[^>]*>/gi, '') // Remove images
+    .replace(/<[^>]*>/g, ' ') // Remove all other HTML tags
+    .replace(/&[a-z]+;/gi, ' ') // Remove HTML entities
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  return textOnly.length > maxLength ? textOnly.slice(0, maxLength).trim() + '…' : textOnly;
+}
+
+/**
  * Formats content for display with proper line breaks and structure
  */
 export function formatContentForDisplay(content: string): string {
