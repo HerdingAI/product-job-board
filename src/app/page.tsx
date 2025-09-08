@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -8,13 +8,135 @@ import { mapSupabaseJobToAppJob } from '@/lib/data-mapper'
 import { AppJob, FilterState, Tag } from '@/lib/types'
 import { Search, MapPin, Clock, Building, Sliders } from 'lucide-react'
 import { formatJobDate, formatSalaryRange } from '@/lib/data-mapper'
-import { AdvancedFilterSidebar } from '@/components/AdvancedFilterSidebar'
 import { searchJobs, highlightSafe, highlight } from '@/lib/search'
 import { extractCleanTextPreview } from '@/lib/html-parser'
 import type { SupabaseJob } from '@/lib/supabase'
 import { tagToUrlParam, tagFromUrlParam } from '@/lib/tag-parser'
+import { usePerformance } from '@/hooks/usePerformance'
+
+// Lazy load the AdvancedFilterSidebar for better performance
+const AdvancedFilterSidebar = lazy(() => 
+  import('@/components/AdvancedFilterSidebar').then(module => ({ 
+    default: module.AdvancedFilterSidebar 
+  }))
+)
+
+// Memoized JobCard component for performance
+const JobCard = memo(({ job, searchTerm }: { job: AppJob; searchTerm: string }) => (
+  <div className="modern-card p-4 sm:p-6 animate-fade-in">
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 sm:mb-4">
+      <div className="flex-grow mb-3 sm:mb-0">
+        <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 leading-tight">
+          <Link href={`/jobs/${job.id}`} className="hover:text-blue-400 transition-colors duration-200">
+            <span dangerouslySetInnerHTML={{ __html: highlight(job.title, searchTerm) }} />
+          </Link>
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-6 text-gray-400 mb-3 text-sm sm:text-base">
+          <div className="flex items-center">
+            <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
+            <span className="font-medium text-gray-300 truncate">{job.company.name}</span>
+          </div>
+          <div className="flex items-center">
+            <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
+            <span className="truncate">
+              {job.location.metro || job.location.city || 
+               (job.location.isRemote ? 'Remote' : 'Location TBD')}
+            </span>
+          </div>
+          <div className="flex items-center">
+            <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
+            <span>{formatJobDate(job.postedDate || job.createdAt)}</span>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-row sm:flex-col items-start sm:items-end sm:text-right sm:ml-6 space-x-3 sm:space-x-0 sm:space-y-2">
+        {formatSalaryRange(job.compensation) && (
+          <div className="flex items-center text-emerald-400 font-semibold text-base sm:text-lg">
+            <span>{formatSalaryRange(job.compensation)}</span>
+          </div>
+        )}
+        {job.experience.seniorityLevel && (
+          <div className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800/50 whitespace-nowrap">
+            {job.experience.seniorityLevel} Level
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Job Description Preview with optional highlighting - Clean Text Only */}
+    <p 
+      className="text-gray-300 mb-3 sm:mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base" 
+      dangerouslySetInnerHTML={{ 
+        __html: highlightSafe(
+          extractCleanTextPreview(job.description, 180), 
+          searchTerm
+        ) 
+      }} 
+    />
+
+    {/* Tags */}
+    {job.tags.length > 0 && (
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+        {job.tags.slice(0, 4).map((tag, index) => (
+          <span
+            key={index}
+            className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
+              ${tag.category === 'core-pm' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' :
+                tag.category === 'technical' ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/50' :
+                tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
+                tag.category === 'leadership' ? 'bg-orange-900/30 text-orange-300 border border-orange-800/50' :
+                'bg-gray-800/50 text-gray-300 border border-gray-700/50'}`}
+          >
+            {tag.label}
+          </span>
+        ))}
+        {job.tags.length > 4 && (
+          <span className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-gray-800/50 text-gray-400 border border-gray-700/50">
+            +{job.tags.length - 4} more
+          </span>
+        )}
+      </div>
+    )}
+
+    {/* Job Meta */}
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-3 border-t border-gray-800 space-y-2 sm:space-y-0">
+      <div className="flex flex-wrap gap-2 text-sm text-gray-400">
+        {job.employmentType && (
+          <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-800/50 text-gray-300 text-xs font-medium">
+            {job.employmentType}
+          </span>
+        )}
+        {job.location.isRemote && (
+          <span className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-900/30 text-emerald-300 text-xs font-medium">
+            Remote OK
+          </span>
+        )}
+        {job.location.isHybrid && (
+          <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-900/30 text-blue-300 text-xs font-medium">
+            Hybrid
+          </span>
+        )}
+      </div>
+      <Link 
+        href={`/jobs/${job.id}`}
+        className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group self-start sm:self-auto"
+      >
+        <span>View Details</span>
+        <span className="ml-1 transition-transform duration-200 group-hover:translate-x-1">→</span>
+      </Link>
+    </div>
+  </div>
+))
+
+JobCard.displayName = 'JobCard'
 
 export default function HomePage() {
+  // Performance monitoring
+  const { startTimer, updateJobCount, logMetrics } = usePerformance()
+  
+  // Search input ref for focus management
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  
   // Next.js routing hooks for URL state management
   const router = useRouter()
   
@@ -26,6 +148,10 @@ export default function HomePage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 50, hasNextPage: false })
   const [totalLoaded, setTotalLoaded] = useState(0)
   const [canLoadMore, setCanLoadMore] = useState(true)
+  
+  // Separate state for search input to enable debouncing
+  const [searchInput, setSearchInput] = useState('')
+  const [isSearchPending, setIsSearchPending] = useState(false)
   const [actualFilterValues, setActualFilterValues] = useState<{
     seniority: string[]
     location: string[]
@@ -186,6 +312,57 @@ export default function HomePage() {
     updateUrl(filters)
   }, [filters, updateUrl])
 
+  // Debounced search effect with smart timing based on search length
+  useEffect(() => {
+    // Smart debounce timing based on search term length
+    const getDebounceDelay = (searchTerm: string) => {
+      const trimmed = searchTerm.trim()
+      if (trimmed.length === 0) return 0 // Clear immediately
+      if (trimmed.length <= 2) return 1200 // Longer delay for short terms
+      if (trimmed.length <= 4) return 800 // Medium delay for medium terms
+      return 600 // Shorter delay for longer, more specific terms
+    }
+
+    const delay = getDebounceDelay(searchInput)
+    
+    // Show pending state if there's a delay and search input differs from current filter
+    if (delay > 0 && searchInput !== filters.search) {
+      setIsSearchPending(true)
+    }
+
+    const timeoutId = setTimeout(() => {
+      setIsSearchPending(false)
+      handleFilterChange({ search: searchInput })
+    }, delay)
+
+    return () => {
+      clearTimeout(timeoutId)
+      if (delay === 0) setIsSearchPending(false)
+    }
+  }, [searchInput, filters.search]) // Added filters.search to dependency
+
+  // Sync searchInput with filters.search when filters change externally (e.g., URL change)
+  useEffect(() => {
+    setSearchInput(filters.search || '')
+  }, [filters.search])
+
+  // Focus search input after results update (for better UX during active searching)
+  useEffect(() => {
+    if (!loading && searchInput.trim() && searchInputRef.current && document.activeElement !== searchInputRef.current) {
+      // Small delay to ensure the page has updated before focusing
+      const timeoutId = setTimeout(() => {
+        searchInputRef.current?.focus()
+        // Move cursor to end of input
+        const input = searchInputRef.current
+        if (input) {
+          input.setSelectionRange(input.value.length, input.value.length)
+        }
+      }, 100)
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jobs, loading, searchInput]) // Focus when jobs update and user has searched
+
   // Function to fetch actual filter values from the database
   const fetchActualFilterValues = useCallback(async () => {
     try {
@@ -273,6 +450,7 @@ export default function HomePage() {
   }, [fetchActualFilterValues])
 
   const fetchJobs = useCallback(async () => {
+    const searchTimer = startTimer('search')
     setLoading(true)
     setError(null)
     
@@ -407,6 +585,9 @@ export default function HomePage() {
       console.error('Search API error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
+      const searchTime = searchTimer.end()
+      updateJobCount(jobs.length)
+      logMetrics()
       setLoading(false)
     }
   }, [filters])
@@ -532,6 +713,19 @@ export default function HomePage() {
     return () => clearTimeout(timeoutId)
   }, [fetchJobs])
 
+  // Memoize the job list rendering for better performance
+  const memoizedJobList = useMemo(() => (
+    <div className="space-y-3 sm:space-y-4">
+      {jobs.map((job) => (
+        <JobCard 
+          key={job.id} 
+          job={job} 
+          searchTerm={filters.search || ''} 
+        />
+      ))}
+    </div>
+  ), [jobs, filters.search])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
@@ -566,14 +760,29 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-black">
       {/* Advanced Filter Sidebar */}
-      <AdvancedFilterSidebar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        isOpen={showAdvancedFilters}
-        onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
-        jobs={jobs}
-        actualFilterValues={actualFilterValues}
-      />
+      <Suspense fallback={
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 lg:hidden">
+          <div className="bg-gray-900 h-full w-80 p-6 shadow-2xl border-r border-gray-800">
+            <div className="animate-pulse">
+              <div className="h-6 bg-gray-800 rounded mb-4"></div>
+              <div className="space-y-3">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-4 bg-gray-800 rounded"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      }>
+        <AdvancedFilterSidebar
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          isOpen={showAdvancedFilters}
+          onToggle={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          jobs={jobs}
+          actualFilterValues={actualFilterValues}
+        />
+      </Suspense>
       
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header Section */}
@@ -591,15 +800,35 @@ export default function HomePage() {
           <div className="relative group">
             <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 transition-colors group-focus-within:text-primary-500" />
             <input
+              ref={searchInputRef}
               type="text"
-              placeholder="Search jobs by title, company, or skills..."
-              value={filters.search || ''}
-              onChange={(e) => handleFilterChange({ search: e.target.value })}
+              placeholder="Search jobs by title, company, or skills... (Press Enter for instant search)"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                // Allow users to press Escape to blur the search input
+                if (e.key === 'Escape') {
+                  searchInputRef.current?.blur()
+                }
+                // Allow users to press Enter for immediate search
+                if (e.key === 'Enter') {
+                  setIsSearchPending(false)
+                  handleFilterChange({ search: searchInput })
+                }
+              }}
               className="input-modern w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 text-sm sm:text-base placeholder-gray-500 focus:placeholder-gray-400"
             />
-            {filters.search?.trim() && (
+            
+            {/* Search pending indicator */}
+            {isSearchPending && (
+              <div className="absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+            
+            {searchInput.trim() && (
               <button
-                onClick={() => handleFilterChange({ search: '' })}
+                onClick={() => setSearchInput('')}
                 className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
                 aria-label="Clear search"
               >
@@ -811,113 +1040,7 @@ export default function HomePage() {
         </div>
 
         {/* Job List */}
-        <div className="space-y-3 sm:space-y-4">
-          {jobs.map((job) => (
-            <div key={job.id} className="modern-card p-4 sm:p-6 animate-fade-in">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 sm:mb-4">
-                <div className="flex-grow mb-3 sm:mb-0">
-                  <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 leading-tight">
-                    <Link href={`/jobs/${job.id}`} className="hover:text-blue-400 transition-colors duration-200">
-                      <span dangerouslySetInnerHTML={{ __html: highlight(job.title, filters.search || '') }} />
-                    </Link>
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-6 text-gray-400 mb-3 text-sm sm:text-base">
-                    <div className="flex items-center">
-                      <Building className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="font-medium text-gray-300 truncate">{job.company.name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span className="truncate">
-                        {job.location.metro || job.location.city || 
-                         (job.location.isRemote ? 'Remote' : 'Location TBD')}
-                      </span>
-                    </div>
-                    <div className="flex items-center">
-                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
-                      <span>{formatJobDate(job.postedDate || job.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-row sm:flex-col items-start sm:items-end sm:text-right sm:ml-6 space-x-3 sm:space-x-0 sm:space-y-2">
-                  {formatSalaryRange(job.compensation) && (
-                    <div className="flex items-center text-emerald-400 font-semibold text-base sm:text-lg">
-                      <span>{formatSalaryRange(job.compensation)}</span>
-                    </div>
-                  )}
-                  {job.experience.seniorityLevel && (
-                    <div className="inline-flex items-center px-2 sm:px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800/50 whitespace-nowrap">
-                      {job.experience.seniorityLevel} Level
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Job Description Preview with optional highlighting - Clean Text Only */}
-              <p 
-                className="text-gray-300 mb-3 sm:mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base" 
-                dangerouslySetInnerHTML={{ 
-                  __html: highlightSafe(
-                    extractCleanTextPreview(job.description, 180), 
-                    filters.search || ''
-                  ) 
-                }} 
-              />
-
-              {/* Tags */}
-              {job.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-                  {job.tags.slice(0, 4).map((tag, index) => (
-                    <span
-                      key={index}
-                      className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
-                        ${tag.category === 'core-pm' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' :
-                          tag.category === 'technical' ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/50' :
-                          tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
-                          tag.category === 'leadership' ? 'bg-orange-900/30 text-orange-300 border border-orange-800/50' :
-                          'bg-gray-800/50 text-gray-300 border border-gray-700/50'}`}
-                    >
-                      {tag.label}
-                    </span>
-                  ))}
-                  {job.tags.length > 4 && (
-                    <span className="inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium bg-gray-800/50 text-gray-400 border border-gray-700/50">
-                      +{job.tags.length - 4} more
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Job Meta */}
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center pt-3 border-t border-gray-800 space-y-2 sm:space-y-0">
-                <div className="flex flex-wrap gap-2 text-sm text-gray-400">
-                  {job.employmentType && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-800/50 text-gray-300 text-xs font-medium">
-                      {job.employmentType}
-                    </span>
-                  )}
-                  {job.location.isRemote && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-900/30 text-emerald-300 text-xs font-medium">
-                      Remote OK
-                    </span>
-                  )}
-                  {job.location.isHybrid && (
-                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-900/30 text-blue-300 text-xs font-medium">
-                      Hybrid
-                    </span>
-                  )}
-                </div>
-                <Link 
-                  href={`/jobs/${job.id}`}
-                  className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group self-start sm:self-auto"
-                >
-                  <span>View Details</span>
-                  <span className="ml-1 transition-transform duration-200 group-hover:translate-x-1">→</span>
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
+        {memoizedJobList}
 
         {/* Load More Button */}
         {jobs.length > 0 && canLoadMore && totalLoaded < 1000 && (

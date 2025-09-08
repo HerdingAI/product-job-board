@@ -6,6 +6,22 @@ const nextConfig: NextConfig = {
     // @ts-expect-error: allowedDevOrigins may not be typed in this Next version yet
     allowedDevOrigins: ['192.168.0.0/16', 'localhost'],
   },
+  
+  // Performance optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  
+  // Image optimization settings
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    dangerouslyAllowSVG: false,
+    unoptimized: false,
+  },
+  
+  // Optimize for performance
+  productionBrowserSourceMaps: false,
 }
 
 export default nextConfig
