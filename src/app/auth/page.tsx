@@ -1,53 +1,18 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Auth } from '@supabase/auth-ui-react'
-import { ThemeSupa } from '@supabase/auth-ui-shared'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
+import Link from 'next/link'
 
 export default function AuthPage() {
-  const { user } = useAuth()
-  const router = useRouter()
-  const [origin, setOrigin] = useState('')
-
-  useEffect(() => {
-    // Set the origin only on the client side
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-    setOrigin(siteUrl)
-  }, [])
-
-  useEffect(() => {
-    if (user) {
-      router.push('/')
-    }
-  }, [user, router])
-
-  if (user) {
-    return null
-  }
-
   return (
     <div className="max-w-md mx-auto mt-16 p-6">
-      <div className="bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-2xl font-bold text-center mb-6">Welcome to Mini Job Board</h1>
-        <Auth
-          supabaseClient={supabase}
-          appearance={{ 
-            theme: ThemeSupa,
-            variables: {
-              default: {
-                colors: {
-                  brand: '#2563eb',
-                  brandAccent: '#1d4ed8',
-                }
-              }
-            }
-          }}
-          providers={[]}
-          redirectTo={origin ? `${origin}/` : '/'}
-        />
+      <div className="bg-white rounded-lg shadow-md p-8 text-center">
+        <h1 className="text-2xl font-bold mb-4">Sign In Disabled</h1>
+        <p className="text-gray-600 mb-6">
+          This is a read-only job board. Posting and accounts are not enabled in this version.
+        </p>
+        <Link href="/" className="text-blue-600 hover:text-blue-800 font-medium">
+          Back to jobs →
+        </Link>
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from '@/contexts/AuthContext'
 import { Header } from '@/components/Header'
 
 const inter = Inter({
@@ -9,8 +8,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Mini Job Board",
-  description: "A simple job board for posting and browsing job opportunities",
+  title: "Product Careers",
+  description: "Curated product management job board",
 };
 
 export default function RootLayout({
@@ -19,16 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.className} antialiased bg-gray-50`}
       >
-        <AuthProvider>
-          <Header />
-          <main className="min-h-screen">
-            {children}
-          </main>
-        </AuthProvider>
+        <Header />
+        <main className="min-h-screen">
+          {children}
+        </main>
       </body>
     </html>
   );

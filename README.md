@@ -1,23 +1,21 @@
-# Mini Job Board
+# Product Careers - Read-only Job Board
 
-A simple, modern job board application built with Next.js and Supabase where companies can post jobs and users can browse them.
+A curated, product-focused job board built with Next.js and Supabase. This fork is configured as a read-only aggregator that surfaces product management roles from multiple sources.
 
 ## 🚀 Live Demo
 
-[Live Application URL] - https://https://mini-job-board-rho.vercel.app
+[Live Application URL] - (to be added)
 
 ## ✨ Features
 
 ### Core Functionality
-- **User Authentication**: Secure sign-up and login using Supabase Auth
-- **Job Posting**: Authenticated users can create job posts with title, company, description, location, and job type
-- **Job Browsing**: Public page to browse all job postings with filtering capabilities
-- **Job Detail View**: Detailed view of individual job postings
-- **User Dashboard**: Personal dashboard to manage (view, edit, delete) posted jobs
+- **Read-only Aggregator**: No posting or accounts in MVP
+- **Rich Product Schema**: Product-specific fields and tags
+- **Job Browsing**: Public page to browse product postings with filtering
+- **Job Detail View**: Detailed view with company, location, and compensation
 
 ### Filtering & Search
-- Filter jobs by location (search)
-- Filter jobs by job type (Full-Time, Part-Time, Contract)
+- Filter jobs by seniority, location metro, work arrangement
 - Real-time filtering without page reloads
 
 ### Modern UI/UX
@@ -40,6 +38,7 @@ A simple, modern job board application built with Next.js and Supabase where com
   - Authentication
   - Real-time subscriptions
   - Row Level Security (RLS)
+   - RPC and FTS for search (planned)
 
 ### Additional Libraries
 - **React Hook Form** - Form handling and validation
@@ -65,19 +64,19 @@ jobs table:
 ```
 src/
 ├── app/                    # Next.js App Router pages
-│   ├── auth/              # Authentication page
-│   ├── dashboard/         # User dashboard and job editing
+│   ├── auth/              # Placeholder auth page (disabled)
 │   ├── jobs/[id]/         # Individual job detail pages
-│   ├── post-job/          # Create new job posting
 │   └── page.tsx           # Home page (job listings)
 ├── components/            # Reusable UI components
 │   ├── ui/               # Base UI components (Button, etc.)
 │   └── Header.tsx        # Main navigation header
-├── contexts/             # React contexts
-│   └── AuthContext.tsx   # Authentication state management
+├── contexts/             # React contexts (kept for future)
+│   └── AuthContext.tsx   # Authentication state management (unused in UI)
 └── lib/                  # Utility functions and configurations
-    ├── supabase.ts       # Supabase client and types
-    └── utils.ts          # Utility functions
+   ├── supabase.ts       # Supabase client and types (rich schema)
+   ├── data-mapper.ts    # Map Supabase rows to UI models
+   ├── types.ts          # Frontend entity types
+   └── utils.ts          # Utility functions
 ```
 
 ### Key Features Implementation
@@ -108,7 +107,7 @@ src/
 1. **Clone the repository**
    ```bash
    git clone [repository-url]
-   cd mini-job-board
+   cd product-job-board
    ```
 
 2. **Install dependencies**
@@ -124,7 +123,7 @@ src/
 4. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-The application will run in **demo mode** with sample data if Supabase is not configured.
+The application requires a Supabase project configured via environment variables.
 
 ### Full Setup with Supabase
 

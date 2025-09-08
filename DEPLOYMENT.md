@@ -65,8 +65,7 @@ CMD ["npm", "start"]
 ## Post-Deployment Checklist
 
 - [ ] Verify environment variables are set correctly
-- [ ] Test authentication flow
-- [ ] Test job posting and editing
+- [ ] Verify jobs load from Supabase (read-only)
 - [ ] Check filtering functionality
 - [ ] Verify responsive design on mobile
 - [ ] Update README with live URL
