@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { JobContent } from '@/components/JobContent'
@@ -9,13 +9,30 @@ import { JobTags } from '@/components/JobTags'
 import { CompanySidebar } from '@/components/CompanySidebar'
 import { formatCamelCase, getFormattedLocation } from '@/lib/tag-extraction'
 import { formatJobDate } from '@/lib/data-mapper'
-import { TagBadge } from '@/components/ui/TagBadge'
 import { ArrowLeft, MapPin, Clock, Building, ExternalLink, Calendar, Briefcase } from 'lucide-react'
+
+// Database job type (snake_case fields from Supabase)
+interface DatabaseJob {
+  id: string
+  title: string
+  description: string
+  company: string // Company name as string from database
+  work_arrangement?: string
+  posted?: string
+  created_at?: string
+  employment_type?: string
+  salary_min?: number
+  salary_max?: number
+  salary_currency?: string
+  seniority_level?: string
+  apply_url?: string
+  location?: string // Location formatted as string
+  [key: string]: unknown
+}
 
 export default function JobDetailPage() {
   const params = useParams()
-  const router = useRouter()
-  const [jobData, setJobData] = useState<any | null>(null)
+  const [jobData, setJobData] = useState<DatabaseJob | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -96,7 +113,7 @@ export default function JobDetailPage() {
   }
 
   // Helper function to format salary
-  const formatSalary = (min?: number, max?: number, currency: string = 'USD') => {
+  const formatSalary = (min?: number, max?: number) => {
     if (!min && !max) return null;
     if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
     if (min) return `$${min.toLocaleString()}+`;
@@ -157,7 +174,7 @@ export default function JobDetailPage() {
               <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end lg:text-right space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-2">
                 {(jobData.salary_min || jobData.salary_max) && (
                   <div className="text-emerald-400 font-bold text-lg sm:text-xl lg:text-xl">
-                    <span>{formatSalary(jobData.salary_min, jobData.salary_max, jobData.salary_currency)}</span>
+                    <span>{formatSalary(jobData.salary_min, jobData.salary_max)}</span>
                   </div>
                 )}
                 {jobData.seniority_level && (

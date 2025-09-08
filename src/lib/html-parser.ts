@@ -31,7 +31,7 @@ export function parseJobDescription(rawHtml: string): ParsedJobContent {
   }
 
   // Remove script tags, style tags, and other unwanted elements
-  let cleanHtml = rawHtml
+  const cleanHtml = rawHtml
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')

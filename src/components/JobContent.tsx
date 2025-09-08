@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { parseJobDescription, extractJobSections, formatContentForDisplay } from '@/lib/html-parser';
+import { parseJobDescription, extractJobSections } from '@/lib/html-parser';
 
 interface JobContentProps {
   rawHtml: string;

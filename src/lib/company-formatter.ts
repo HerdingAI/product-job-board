@@ -17,23 +17,31 @@ interface CompanyInfo {
   };
 }
 
-export function formatCompanyInfo(jobData: any): CompanyInfo {
+// Job data interface for company formatter
+interface FormatterJobData {
+  [key: string]: unknown;
+}
+
+export function formatCompanyInfo(jobData: FormatterJobData): CompanyInfo {
   return {
     basicInfo: {
-      name: jobData.company,
-      stage: formatCompanyStage(jobData.company_stage),
-      industry: formatIndustry(jobData.industry_vertical),
-      businessModel: formatBusinessModel(jobData.business_model)
+      name: typeof jobData.company === 'string' ? jobData.company : '',
+      stage: formatCompanyStage(typeof jobData.company_stage === 'string' ? jobData.company_stage : null),
+      industry: formatIndustry(typeof jobData.industry_vertical === 'string' ? jobData.industry_vertical : null),
+      businessModel: formatBusinessModel(typeof jobData.business_model === 'string' ? jobData.business_model : null)
     },
     compensation: {
-      equityMentioned: jobData.equity_mentioned === true || jobData.equity_mentioned === 1,
-      salaryRange: formatSalaryRange(jobData.salary_min, jobData.salary_max),
-      benefits: extractBenefits(jobData.description)
+      equityMentioned: Boolean(jobData.equity_mentioned),
+      salaryRange: formatSalaryRange(
+        typeof jobData.salary_min === 'number' ? jobData.salary_min : null,
+        typeof jobData.salary_max === 'number' ? jobData.salary_max : null
+      ),
+      benefits: extractBenefits(typeof jobData.description === 'string' ? jobData.description : null)
     },
     culture: {
-      workArrangement: formatWorkArrangement(jobData.work_arrangement),
-      remoteFlexibility: jobData.is_remote === 1 ? jobData.remote_flexibility : null,
-      values: extractCompanyValues(jobData.description)
+      workArrangement: formatWorkArrangement(typeof jobData.work_arrangement === 'string' ? jobData.work_arrangement : null),
+      remoteFlexibility: jobData.is_remote === 1 ? (typeof jobData.remote_flexibility === 'string' ? jobData.remote_flexibility : undefined) : undefined,
+      values: extractCompanyValues(typeof jobData.description === 'string' ? jobData.description : null)
     }
   };
 }
@@ -249,7 +257,7 @@ export interface LocationInfo {
   tags: string[];
 }
 
-export function formatLocation(jobData: any): LocationInfo {
+export function formatLocation(jobData: FormatterJobData): LocationInfo {
   return formatLocationUtil(jobData);
 }
 
@@ -259,7 +267,7 @@ export interface ExperienceInfo {
   tags: string[];
 }
 
-export function formatExperience(jobData: any): ExperienceInfo {
+export function formatExperience(jobData: FormatterJobData): ExperienceInfo {
   return formatExperienceUtil(jobData);
 }
 
@@ -268,7 +276,7 @@ export interface ProductContextInfo {
   tags: string[];
 }
 
-export function formatProductContext(jobData: any): ProductContextInfo {
+export function formatProductContext(jobData: FormatterJobData): ProductContextInfo {
   return formatProductContextUtil(jobData);
 }
 
@@ -277,6 +285,6 @@ export interface ManagementInfo {
   tags: string[];
 }
 
-export function formatManagementInfo(jobData: any): ManagementInfo {
+export function formatManagementInfo(jobData: FormatterJobData): ManagementInfo {
   return formatManagementInfoUtil(jobData);
 }

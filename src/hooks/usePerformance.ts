@@ -68,13 +68,13 @@ export const usePerformance = () => {
           new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
               // Type assertion for layout shift entries
-              const layoutShift = entry as any
+              const layoutShift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
               if (entry.entryType === 'layout-shift' && !layoutShift.hadRecentInput) {
                 console.log('📐 Layout Shift Score:', layoutShift.value)
               }
             }
           }).observe({ type: 'layout-shift', buffered: true })
-        } catch (e) {
+        } catch {
           // Layout shift observation not supported
         }
       }

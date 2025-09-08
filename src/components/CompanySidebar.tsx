@@ -9,8 +9,13 @@ import { extractJobTags } from '@/lib/tag-extraction';
 import { TagBadge } from '@/components/ui/TagBadge';
 import { SidebarSection } from '@/components/ui/SidebarSection';
 
+// Job data interface for CompanySidebar
+interface JobData {
+  [key: string]: unknown;
+}
+
 interface CompanySidebarProps {
-  jobData: any;
+  jobData: JobData;
   className?: string;
 }
 
@@ -24,7 +29,7 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
   const legacyTags = extractJobTags(jobData);
 
   // Helper function to check if a value should be displayed
-  const shouldDisplayValue = (value: any): boolean => {
+  const shouldDisplayValue = (value: unknown): boolean => {
     if (!value) return false;
     if (typeof value === 'string') {
       const lowerValue = value.toLowerCase().trim();

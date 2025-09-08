@@ -2,8 +2,13 @@ import React from 'react';
 import { extractJobTags } from '@/lib/tag-extraction';
 import { TagBadge } from './ui/TagBadge';
 
+// Job data interface for JobTags
+interface JobData {
+  [key: string]: unknown;
+}
+
 interface JobTagsProps {
-  jobData: any;
+  jobData: JobData;
   className?: string;
 }
 
@@ -11,7 +16,7 @@ export function JobTags({ jobData, className = '' }: JobTagsProps) {
   const extractedTags = extractJobTags(jobData);
   
   // Helper function to check if a value should be displayed
-  const shouldDisplayValue = (value: any): boolean => {
+  const shouldDisplayValue = (value: unknown): boolean => {
     if (!value) return false;
     if (typeof value === 'string') {
       const lowerValue = value.toLowerCase().trim();
@@ -77,7 +82,9 @@ export function JobTags({ jobData, className = '' }: JobTagsProps) {
       </div>
       
       {/* Additional info if data is available */}
-      {(jobData.primary_responsibilities || jobData.tools_platforms || jobData.technical_skills) && (
+      {(shouldDisplayValue(jobData.primary_responsibilities) || 
+        shouldDisplayValue(jobData.tools_platforms) || 
+        shouldDisplayValue(jobData.technical_skills)) && (
         <div className="mt-4 p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
           <p className="text-xs text-blue-300">
             <span className="font-medium">Tags extracted from:</span> Job requirements, responsibilities, and skills data

@@ -219,7 +219,7 @@ export function formatWorkArrangement(arrangement: string): string {
 /**
  * Format salary range to readable format
  */
-export function formatSalaryRange(min?: number, max?: number, currency: string = 'USD'): string {
+export function formatSalaryRange(min?: number, max?: number): string {
   if (!min && !max) return '';
   
   const formatNumber = (num: number) => {

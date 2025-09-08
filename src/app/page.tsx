@@ -339,7 +339,8 @@ export default function HomePage() {
       clearTimeout(timeoutId)
       if (delay === 0) setIsSearchPending(false)
     }
-  }, [searchInput, filters.search]) // Added filters.search to dependency
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput, filters.search]) // handleFilterChange is stable (useCallback with empty deps)
 
   // Sync searchInput with filters.search when filters change externally (e.g., URL change)
   useEffect(() => {
@@ -515,7 +516,7 @@ export default function HomePage() {
           if (filters.salaryMin) q = q.gte('salary_min', filters.salaryMin)
           if (filters.salaryMax) q = q.lte('salary_max', filters.salaryMax)
 
-          const { data, error: fbErr, count } = await q
+          const { data, error: fbErr } = await q
           if (fbErr) throw fbErr
           let mapped = (data || []).map(mapSupabaseJobToAppJob)
           if (filters.activeTags && filters.activeTags.length > 0) {
@@ -585,12 +586,62 @@ export default function HomePage() {
       console.error('Search API error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
-      const searchTime = searchTimer.end()
+      searchTimer.end()
       updateJobCount(jobs.length)
       logMetrics()
       setLoading(false)
     }
-  }, [filters])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]) // startTimer, updateJobCount, logMetrics are stable (from usePerformance hook)
+
+  // Helper function for regular query load more
+  const loadMoreWithRegularQuery = useCallback(async (nextPage: number, limit: number) => {
+    let query = supabase
+      .from('jobs')
+      .select('*')
+      .eq('is_currently_active', true)
+      .eq('is_product_job', true)
+      .order('created_at', { ascending: false })
+      .range((nextPage - 1) * limit, nextPage * limit - 1)
+
+    // Apply all filters
+    if (filters.seniority && filters.seniority.trim()) {
+      query = query.eq('seniority_level', filters.seniority)
+    }
+    if (filters.location && filters.location.trim()) {
+      query = query.eq('location_metro', filters.location)
+    }
+    if (filters.workArrangement && filters.workArrangement.trim()) {
+      query = query.eq('work_arrangement', filters.workArrangement)
+    }
+    if (filters.companyStage?.length) query = query.in('company_stage', filters.companyStage)
+    if (filters.productLifecycle?.length) query = query.in('product_lifecycle_focus', filters.productLifecycle)
+    if (filters.productDomain?.length) query = query.in('product_domain', filters.productDomain)
+    if (filters.managementScope?.length) query = query.in('management_scope', filters.managementScope)
+    if (filters.industryVertical?.length) query = query.in('industry_vertical', filters.industryVertical)
+    if (filters.experienceBucket?.length) query = query.in('experience_bucket', filters.experienceBucket)
+    if (filters.domainExpertise?.length) query = query.in('domain_expertise', filters.domainExpertise)
+    if (filters.salaryMin) query = query.gte('salary_min', filters.salaryMin)
+    if (filters.salaryMax) query = query.lte('salary_max', filters.salaryMax)
+
+    const { data, error: fetchError } = await query
+    if (fetchError) throw fetchError
+    
+    let newJobs = (data || []).map(mapSupabaseJobToAppJob)
+    if (filters.activeTags && filters.activeTags.length > 0) {
+      newJobs = newJobs.filter(job =>
+        filters.activeTags!.every(selectedTag =>
+          job.tags.some(jobTag => jobTag.label === selectedTag.label && jobTag.category === selectedTag.category)
+        )
+      )
+    }
+    
+    const updatedJobs = [...jobs, ...newJobs]
+    setJobs(updatedJobs)
+    setTotalLoaded(updatedJobs.length)
+    setCanLoadMore(updatedJobs.length < 1000 && newJobs.length === limit)
+    setPagination({ page: nextPage, limit, hasNextPage: newJobs.length === limit })
+  }, [filters, jobs]) // dependencies for loadMoreWithRegularQuery
 
   // Load more jobs function - appends to existing jobs
   const loadMoreJobs = useCallback(async () => {
@@ -648,56 +699,7 @@ export default function HomePage() {
     } finally {
       setLoadingMore(false)
     }
-  }, [filters, jobs, pagination, canLoadMore, loadingMore, totalLoaded])
-
-  // Helper function for regular query load more
-  const loadMoreWithRegularQuery = async (nextPage: number, limit: number) => {
-    let query = supabase
-      .from('jobs')
-      .select('*')
-      .eq('is_currently_active', true)
-      .eq('is_product_job', true)
-      .order('created_at', { ascending: false })
-      .range((nextPage - 1) * limit, nextPage * limit - 1)
-
-    // Apply all filters
-    if (filters.seniority && filters.seniority.trim()) {
-      query = query.eq('seniority_level', filters.seniority)
-    }
-    if (filters.location && filters.location.trim()) {
-      query = query.eq('location_metro', filters.location)
-    }
-    if (filters.workArrangement && filters.workArrangement.trim()) {
-      query = query.eq('work_arrangement', filters.workArrangement)
-    }
-    if (filters.companyStage?.length) query = query.in('company_stage', filters.companyStage)
-    if (filters.productLifecycle?.length) query = query.in('product_lifecycle_focus', filters.productLifecycle)
-    if (filters.productDomain?.length) query = query.in('product_domain', filters.productDomain)
-    if (filters.managementScope?.length) query = query.in('management_scope', filters.managementScope)
-    if (filters.industryVertical?.length) query = query.in('industry_vertical', filters.industryVertical)
-    if (filters.experienceBucket?.length) query = query.in('experience_bucket', filters.experienceBucket)
-    if (filters.domainExpertise?.length) query = query.in('domain_expertise', filters.domainExpertise)
-    if (filters.salaryMin) query = query.gte('salary_min', filters.salaryMin)
-    if (filters.salaryMax) query = query.lte('salary_max', filters.salaryMax)
-
-    const { data, error: fetchError } = await query
-    if (fetchError) throw fetchError
-    
-    let newJobs = (data || []).map(mapSupabaseJobToAppJob)
-    if (filters.activeTags && filters.activeTags.length > 0) {
-      newJobs = newJobs.filter(job =>
-        filters.activeTags!.every(selectedTag =>
-          job.tags.some(jobTag => jobTag.label === selectedTag.label && jobTag.category === selectedTag.category)
-        )
-      )
-    }
-    
-    const updatedJobs = [...jobs, ...newJobs]
-    setJobs(updatedJobs)
-    setTotalLoaded(updatedJobs.length)
-    setCanLoadMore(updatedJobs.length < 1000 && newJobs.length === limit)
-    setPagination({ page: nextPage, limit, hasNextPage: newJobs.length === limit })
-  }
+  }, [filters, jobs, pagination, canLoadMore, loadingMore, totalLoaded, loadMoreWithRegularQuery])
 
   useEffect(() => {
     // Reset pagination and load more state when filters change
@@ -1006,7 +1008,7 @@ export default function HomePage() {
               {filters.search?.trim() ? (
                 <>
                   <span className="font-medium">{jobs.length}</span> results found for 
-                  <span className="font-medium text-blue-600 ml-1">"{filters.search.trim()}"</span>
+                  <span className="font-medium text-blue-600 ml-1">&ldquo;{filters.search.trim()}&rdquo;</span>
                 </>
               ) : (
                 <>Showing <span className="font-medium">{jobs.length}</span> product management positions</>
@@ -1091,7 +1093,7 @@ export default function HomePage() {
               {filters.search?.trim() ? (
                 <div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No results found for "{filters.search.trim()}"
+                    No results found for &ldquo;{filters.search.trim()}&rdquo;
                   </h3>
                   <p className="text-gray-500 mb-6">
                     Try adjusting your search terms or removing some filters to see more results.
@@ -1124,7 +1126,7 @@ export default function HomePage() {
                 Clear all filters
               </button>
               <p className="text-sm text-gray-400 mt-4">
-                Or try searching for terms like "product manager", "AI", "senior", "growth"
+                Or try searching for terms like &ldquo;product manager&rdquo;, &ldquo;AI&rdquo;, &ldquo;senior&rdquo;, &ldquo;growth&rdquo;
               </p>
             </div>
           </div>
