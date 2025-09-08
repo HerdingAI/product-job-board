@@ -230,11 +230,11 @@ export function formatSalaryRange(min?: number, max?: number, currency: string =
   };
   
   if (min && max) {
-    return `${formatNumber(min)} - ${formatNumber(max)} ${currency}`;
+    return `${formatNumber(min)} - ${formatNumber(max)}`;
   } else if (min) {
-    return `${formatNumber(min)}+ ${currency}`;
+    return `${formatNumber(min)}+`;
   } else if (max) {
-    return `Up to ${formatNumber(max)} ${currency}`;
+    return `Up to ${formatNumber(max)}`;
   }
   
   return '';

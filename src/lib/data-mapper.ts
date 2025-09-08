@@ -49,13 +49,13 @@ export function formatSalaryRange(compensation: Compensation): string | null {
   
   // Only display if we have actual salary numbers
   if (compensation.salaryMin && compensation.salaryMax) {
-    const currency = compensation.currency || '$'
+    // Format without dollar sign for cleaner display
     const formatNum = (num: number) => {
       if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
       if (num >= 1000) return `${Math.floor(num / 1000)}K`
       return num.toString()
     }
-    return `${currency}${formatNum(compensation.salaryMin)} - ${currency}${formatNum(compensation.salaryMax)}`
+    return `${formatNum(compensation.salaryMin)} - ${formatNum(compensation.salaryMax)}`
   }
   
   // Don't show anything if no salary info
