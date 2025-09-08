@@ -472,8 +472,17 @@ export default function HomePage() {
               placeholder="Search jobs by title, company, or skills..."
               value={filters.search || ''}
               onChange={(e) => handleFilterChange({ search: e.target.value })}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            {filters.search?.trim() && (
+              <button
+                onClick={() => handleFilterChange({ search: '' })}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5"
+                aria-label="Clear search"
+              >
+                <span className="text-lg">×</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -617,9 +626,29 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Results Count */}
+        {/* Results Count & Search Status */}
         <div className="mb-6 flex items-center justify-between">
-          <p className="text-gray-600">Showing {jobs.length} product management positions</p>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-600">
+              {filters.search?.trim() ? (
+                <>
+                  <span className="font-medium">{jobs.length}</span> results found for 
+                  <span className="font-medium text-blue-600 ml-1">"{filters.search.trim()}"</span>
+                </>
+              ) : (
+                <>Showing <span className="font-medium">{jobs.length}</span> product management positions</>
+              )}
+            </p>
+            {filters.search?.trim() && (
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              >
+                <span>Clear search</span>
+                <span className="text-lg">×</span>
+              </button>
+            )}
+          </div>
           {filters.search?.trim() && (
             <div className="flex items-center gap-2">
               <button
@@ -645,7 +674,7 @@ export default function HomePage() {
                 <div className="flex-grow">
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
                     <Link href={`/jobs/${job.id}`} className="hover:text-blue-600">
-                      {job.title}
+                      <span dangerouslySetInnerHTML={{ __html: highlight(job.title, filters.search || '') }} />
                     </Link>
                   </h3>
                   <div className="flex items-center space-x-4 text-gray-600 mb-3">
@@ -734,14 +763,48 @@ export default function HomePage() {
 
         {/* Empty State */}
         {jobs.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No jobs found matching your criteria.</p>
-            <button
-              onClick={() => setFilters({ search: '', seniority: '', location: '', workArrangement: '', activeTags: [] })}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              Clear all filters
-            </button>
+          <div className="text-center py-12 px-4">
+            <div className="mb-6">
+              <Search className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              {filters.search?.trim() ? (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No results found for "{filters.search.trim()}"
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Try adjusting your search terms or removing some filters to see more results.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No jobs match your current filters
+                  </h3>
+                  <p className="text-gray-500 mb-6">
+                    Try broadening your search criteria or clearing some filters.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              {filters.search?.trim() && (
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, search: '' }))}
+                  className="block mx-auto text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Clear search term
+                </button>
+              )}
+              <button
+                onClick={() => setFilters({ search: '', seniority: '', location: '', workArrangement: '', activeTags: [] })}
+                className="block mx-auto text-blue-600 hover:text-blue-800 font-medium"
+              >
+                Clear all filters
+              </button>
+              <p className="text-sm text-gray-400 mt-4">
+                Or try searching for terms like "product manager", "AI", "senior", "growth"
+              </p>
+            </div>
           </div>
         )}
       </div>

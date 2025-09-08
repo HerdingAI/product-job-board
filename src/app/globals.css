@@ -35,3 +35,12 @@ body {
     -webkit-line-clamp: 3;
     line-clamp: 3;
 }
+
+/* Search highlighting */
+mark {
+    background-color: #fef08a; /* yellow-200 */
+    color: #854d0e; /* yellow-900 */
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+}
