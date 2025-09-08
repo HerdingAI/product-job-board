@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { JobContent } from '@/components/JobContent'
 import { mapSupabaseJobToAppJob, formatJobDate, formatSalaryRange } from '@/lib/data-mapper'
 import { AppJob } from '@/lib/types'
 import { ArrowLeft, MapPin, Clock, Building, DollarSign, ExternalLink, Calendar } from 'lucide-react'
@@ -12,6 +13,7 @@ export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [job, setJob] = useState<AppJob | null>(null)
+  const [rawJobData, setRawJobData] = useState<any | null>(null) // Store raw data for HTML parsing
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,6 +43,7 @@ export default function JobDetailPage() {
       // Transform the data using our mapper
       const transformedJob = mapSupabaseJobToAppJob(data)
       setJob(transformedJob)
+      setRawJobData(data) // Store raw data for HTML parsing
       
     } catch (err) {
       console.error('Unexpected error:', err)
@@ -191,11 +194,7 @@ export default function JobDetailPage() {
               <div className="lg:col-span-2">
                 <div className="mb-8">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">Job Description</h2>
-                  <div className="prose max-w-none">
-                    <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                      {job.description}
-                    </p>
-                  </div>
+                  <JobContent rawHtml={rawJobData?.description || job.description} />
                 </div>
 
                 {/* Skills & Tags */}
