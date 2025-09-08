@@ -1,5 +1,12 @@
 import React from 'react';
-import { extractJobTags, getFormattedLocation, getFormattedExperience } from '@/lib/tag-extraction';
+import { 
+  formatCompanyInfo, 
+  formatLocation, 
+  formatExperience, 
+  formatProductContext, 
+  formatManagementInfo 
+} from '@/lib/company-formatter';
+import { extractJobTags } from '@/lib/tag-extraction';
 import { TagBadge } from '@/components/ui/TagBadge';
 import { SidebarSection } from '@/components/ui/SidebarSection';
 
@@ -9,27 +16,40 @@ interface CompanySidebarProps {
 }
 
 export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps) {
-  const extractedTags = extractJobTags(jobData);
-  const formattedLocation = getFormattedLocation(jobData);
-  const formattedExperience = getFormattedExperience(jobData);
+  const companyInfo = formatCompanyInfo(jobData);
+  const location = formatLocation(jobData);
+  const experience = formatExperience(jobData);
+  const productContext = formatProductContext(jobData);
+  const managementInfo = formatManagementInfo(jobData);
+  
+  // Keep legacy KPI tags from the old system
+  const legacyTags = extractJobTags(jobData);
 
   return (
     <div className={className}>
       {/* COMPANY Section */}
       <SidebarSection title="COMPANY">
         <div className="space-y-3">
-          <p className="font-medium text-gray-900">{jobData.company}</p>
+          <p className="font-medium text-gray-900">{companyInfo.basicInfo.name}</p>
           
-          {extractedTags.company.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {extractedTags.company.map((tag, index) => (
-                <TagBadge 
-                  key={`company-${index}`}
-                  label={tag} 
-                  color="blue" 
-                  size="sm" 
-                />
-              ))}
+          <div className="flex flex-wrap gap-1">
+            {companyInfo.basicInfo.stage && (
+              <TagBadge label={companyInfo.basicInfo.stage} color="blue" size="sm" />
+            )}
+            {companyInfo.basicInfo.industry && (
+              <TagBadge label={companyInfo.basicInfo.industry} color="blue" size="sm" />
+            )}
+            {companyInfo.basicInfo.businessModel && (
+              <TagBadge label={companyInfo.basicInfo.businessModel} color="green" size="sm" />
+            )}
+            {companyInfo.compensation.equityMentioned && (
+              <TagBadge label="Equity Offered" color="purple" size="sm" />
+            )}
+          </div>
+          
+          {companyInfo.compensation.salaryRange && (
+            <div className="mt-2">
+              <p className="text-sm text-gray-600">Salary: {companyInfo.compensation.salaryRange}</p>
             </div>
           )}
         </div>
@@ -38,11 +58,11 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
       {/* LOCATION Section */}
       <SidebarSection title="LOCATION">
         <div className="space-y-3">
-          <p className="text-sm text-gray-900">{formattedLocation}</p>
+          <p className="text-sm text-gray-900">{location.primary}</p>
           
-          {extractedTags.location.length > 0 && (
+          {location.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {extractedTags.location.map((tag, index) => (
+              {location.tags.map((tag, index) => (
                 <TagBadge 
                   key={`location-${index}`}
                   label={tag} 
@@ -52,17 +72,21 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
               ))}
             </div>
           )}
+          
+          {companyInfo.culture.remoteFlexibility && (
+            <p className="text-xs text-gray-500">{companyInfo.culture.remoteFlexibility}</p>
+          )}
         </div>
       </SidebarSection>
 
       {/* EXPERIENCE Section */}
       <SidebarSection title="EXPERIENCE">
         <div className="space-y-3">
-          <p className="text-sm text-gray-900">{formattedExperience}</p>
+          <p className="text-sm text-gray-900">{experience.formatted}</p>
           
-          {extractedTags.experience.length > 0 && (
+          {experience.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {extractedTags.experience.map((tag, index) => (
+              {experience.tags.map((tag, index) => (
                 <TagBadge 
                   key={`experience-${index}`}
                   label={tag} 
@@ -76,10 +100,10 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
       </SidebarSection>
 
       {/* PRODUCT CONTEXT Section */}
-      {extractedTags.productContext.length > 0 && (
+      {productContext.tags.length > 0 && (
         <SidebarSection title="PRODUCT CONTEXT">
           <div className="flex flex-wrap gap-1">
-            {extractedTags.productContext.map((tag, index) => (
+            {productContext.tags.map((tag, index) => (
               <TagBadge 
                 key={`product-context-${index}`}
                 label={tag} 
@@ -91,11 +115,11 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
         </SidebarSection>
       )}
 
-      {/* MANAGEMENT & LEADERSHIP Section */}
-      {extractedTags.management.length > 0 && (
-        <SidebarSection title="MANAGEMENT & LEADERSHIP">
+      {/* MANAGEMENT Section */}
+      {managementInfo.tags.length > 0 && (
+        <SidebarSection title="MANAGEMENT">
           <div className="flex flex-wrap gap-1">
-            {extractedTags.management.map((tag, index) => (
+            {managementInfo.tags.map((tag, index) => (
               <TagBadge 
                 key={`management-${index}`}
                 label={tag} 
@@ -108,10 +132,10 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
       )}
 
       {/* KPI OWNERSHIP Section */}
-      {extractedTags.kpis.length > 0 && (
+      {legacyTags.kpis.length > 0 && (
         <SidebarSection title="KPI OWNERSHIP">
           <div className="flex flex-wrap gap-1">
-            {extractedTags.kpis.map((tag, index) => (
+            {legacyTags.kpis.map((tag, index) => (
               <TagBadge 
                 key={`kpi-${index}`}
                 label={tag} 
@@ -123,12 +147,43 @@ export function CompanySidebar({ jobData, className = '' }: CompanySidebarProps)
         </SidebarSection>
       )}
 
-      {/* Additional Information */}
-      <div className="mt-6 p-3 bg-gray-100 rounded-lg">
-        <p className="text-xs text-gray-600">
-          <span className="font-medium">Information extracted from:</span> Company data, job requirements, and role specifications
-        </p>
-      </div>
+      {/* COMPANY CULTURE Section */}
+      {(companyInfo.culture.values && companyInfo.culture.values.length > 0) && (
+        <SidebarSection title="CULTURE">
+          <div className="space-y-2">
+            {companyInfo.culture.workArrangement && (
+              <p className="text-sm text-gray-600">Work Style: {companyInfo.culture.workArrangement}</p>
+            )}
+            
+            <div className="flex flex-wrap gap-1">
+              {companyInfo.culture.values.slice(0, 3).map((value, index) => (
+                <TagBadge 
+                  key={`value-${index}`}
+                  label={value} 
+                  color="blue" 
+                  size="sm" 
+                />
+              ))}
+            </div>
+          </div>
+        </SidebarSection>
+      )}
+
+      {/* BENEFITS Section */}
+      {(companyInfo.compensation.benefits && companyInfo.compensation.benefits.length > 0) && (
+        <SidebarSection title="BENEFITS">
+          <div className="flex flex-wrap gap-1">
+            {companyInfo.compensation.benefits.slice(0, 4).map((benefit, index) => (
+              <TagBadge 
+                key={`benefit-${index}`}
+                label={benefit} 
+                color="green" 
+                size="sm" 
+              />
+            ))}
+          </div>
+        </SidebarSection>
+      )}
     </div>
   );
 }
