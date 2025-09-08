@@ -442,7 +442,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       {/* Advanced Filter Sidebar */}
       <AdvancedFilterSidebar
         filters={filters}
@@ -453,32 +453,32 @@ export default function HomePage() {
         actualFilterValues={actualFilterValues}
       />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
             Product Management Jobs
           </h1>
-          <p className="text-gray-600">
-            Discover your next product role from top companies
+          <p className="text-xl text-gray-300 max-w-2xl mx-auto leading-relaxed">
+            Discover your next product role from top companies worldwide
           </p>
         </div>
 
         {/* Search Bar */}
-        <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <div className="mb-8">
+          <div className="relative group">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 transition-colors group-focus-within:text-primary-500" />
             <input
               type="text"
               placeholder="Search jobs by title, company, or skills..."
               value={filters.search || ''}
               onChange={(e) => handleFilterChange({ search: e.target.value })}
-              className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="input-modern w-full pl-12 pr-12 py-4 text-base placeholder-gray-500 focus:placeholder-gray-400"
             />
             {filters.search?.trim() && (
               <button
                 onClick={() => handleFilterChange({ search: '' })}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
                 aria-label="Clear search"
               >
                 <span className="text-lg">×</span>
@@ -489,43 +489,64 @@ export default function HomePage() {
 
         {/* Filter Bar */}
         <div className="mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <select
-              value={filters.seniority || ''}
-              onChange={(e) => handleFilterChange({ seniority: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Seniority Levels</option>
-              {actualFilterValues.seniority.map(level => (
-                <option key={level} value={level}>{level}</option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="relative">
+              <select
+                value={filters.seniority || ''}
+                onChange={(e) => handleFilterChange({ seniority: e.target.value })}
+                className="input-modern appearance-none w-full pr-10"
+              >
+                <option value="">All Seniority Levels</option>
+                {actualFilterValues.seniority.map(level => (
+                  <option key={level} value={level}>{level}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
 
-            <select
-              value={filters.location || ''}
-              onChange={(e) => handleFilterChange({ location: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Locations</option>
-              {actualFilterValues.location.map(location => (
-                <option key={location} value={location}>{location}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={filters.location || ''}
+                onChange={(e) => handleFilterChange({ location: e.target.value })}
+                className="input-modern appearance-none w-full pr-10"
+              >
+                <option value="">All Locations</option>
+                {actualFilterValues.location.map(location => (
+                  <option key={location} value={location}>{location}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
 
-            <select
-              value={filters.workArrangement || ''}
-              onChange={(e) => handleFilterChange({ workArrangement: e.target.value })}
-              className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Work Types</option>
-              {actualFilterValues.workArrangement.map(arrangement => (
-                <option key={arrangement} value={arrangement}>{arrangement}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={filters.workArrangement || ''}
+                onChange={(e) => handleFilterChange({ workArrangement: e.target.value })}
+                className="input-modern appearance-none w-full pr-10"
+              >
+                <option value="">All Work Types</option>
+                {actualFilterValues.workArrangement.map(arrangement => (
+                  <option key={arrangement} value={arrangement}>{arrangement}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
 
             <button
               onClick={() => setShowAdvancedFilters(true)}
-              className="flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="btn-modern flex items-center justify-center"
             >
               <Sliders className="h-4 w-4 mr-2" />
               Advanced Filters
@@ -550,7 +571,7 @@ export default function HomePage() {
                 salaryMin: undefined,
                 salaryMax: undefined
               })}
-              className="text-gray-600 hover:text-gray-800 text-sm"
+              className="text-gray-600 hover:text-primary-600 text-sm font-medium transition-colors duration-200"
             >
               Clear All Filters
             </button>
@@ -668,43 +689,43 @@ export default function HomePage() {
         </div>
 
         {/* Job List */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {jobs.map((job) => (
-            <div key={job.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div key={job.id} className="modern-card p-6 animate-fade-in">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-grow">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    <Link href={`/jobs/${job.id}`} className="hover:text-blue-600">
+                  <h3 className="text-xl font-semibold text-white mb-2 leading-tight">
+                    <Link href={`/jobs/${job.id}`} className="hover:text-blue-400 transition-colors duration-200">
                       <span dangerouslySetInnerHTML={{ __html: highlight(job.title, filters.search || '') }} />
                     </Link>
                   </h3>
-                  <div className="flex items-center space-x-4 text-gray-600 mb-3">
+                  <div className="flex items-center space-x-6 text-gray-400 mb-3">
                     <div className="flex items-center">
-                      <Building className="h-4 w-4 mr-1" />
-                      <span>{job.company.name}</span>
+                      <Building className="h-4 w-4 mr-2 text-gray-500" />
+                      <span className="font-medium text-gray-300">{job.company.name}</span>
                     </div>
                     <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
+                      <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                       <span>
                         {job.location.metro || job.location.city || 
                          (job.location.isRemote ? 'Remote' : 'Location TBD')}
                       </span>
                     </div>
                     <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
+                      <Clock className="h-4 w-4 mr-2 text-gray-500" />
                       <span>{formatJobDate(job.postedDate || job.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-6">
                   {formatSalaryRange(job.compensation) && (
-                    <div className="flex items-center text-green-600 font-medium">
-                      <DollarSign className="h-4 w-4 mr-1" />
+                    <div className="flex items-center text-emerald-400 font-semibold text-lg">
+                      <DollarSign className="h-5 w-5 mr-1" />
                       <span>{formatSalaryRange(job.compensation)}</span>
                     </div>
                   )}
                   {job.experience.seniorityLevel && (
-                    <div className={`text-sm text-gray-500 ${formatSalaryRange(job.compensation) ? 'mt-1' : ''}`}>
+                    <div className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-900/30 text-blue-300 border border-blue-800/50 ${formatSalaryRange(job.compensation) ? 'mt-2' : ''}`}>
                       {job.experience.seniorityLevel} Level
                     </div>
                   )}
@@ -712,7 +733,7 @@ export default function HomePage() {
               </div>
 
               {/* Job Description Preview with optional highlighting */}
-              <p className="text-gray-700 mb-4 line-clamp-2" dangerouslySetInnerHTML={{ __html: highlight(job.description, filters.search || '') }} />
+              <p className="text-gray-300 mb-4 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: highlight(job.description, filters.search || '') }} />
 
               {/* Tags */}
               {job.tags.length > 0 && (
@@ -720,18 +741,18 @@ export default function HomePage() {
                   {job.tags.slice(0, 6).map((tag, index) => (
                     <span
                       key={index}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        ${tag.category === 'core-pm' ? 'bg-blue-100 text-blue-800' :
-                          tag.category === 'technical' ? 'bg-green-100 text-green-800' :
-                          tag.category === 'domain' ? 'bg-purple-100 text-purple-800' :
-                          tag.category === 'leadership' ? 'bg-orange-100 text-orange-800' :
-                          'bg-gray-100 text-gray-800'}`}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
+                        ${tag.category === 'core-pm' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' :
+                          tag.category === 'technical' ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/50' :
+                          tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
+                          tag.category === 'leadership' ? 'bg-orange-900/30 text-orange-300 border border-orange-800/50' :
+                          'bg-gray-800/50 text-gray-300 border border-gray-700/50'}`}
                     >
                       {tag.label}
                     </span>
                   ))}
                   {job.tags.length > 6 && (
-                    <span className="text-gray-500 text-xs">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800/50 text-gray-400 border border-gray-700/50">
                       +{job.tags.length - 6} more
                     </span>
                   )}
@@ -739,23 +760,30 @@ export default function HomePage() {
               )}
 
               {/* Job Meta */}
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-4 text-sm text-gray-500">
+              <div className="flex justify-between items-center pt-3 border-t border-gray-800">
+                <div className="flex space-x-4 text-sm text-gray-400">
                   {job.employmentType && (
-                    <span>{job.employmentType}</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-gray-800/50 text-gray-300 text-xs font-medium">
+                      {job.employmentType}
+                    </span>
                   )}
                   {job.location.isRemote && (
-                    <span className="text-green-600">Remote OK</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-900/30 text-emerald-300 text-xs font-medium">
+                      Remote OK
+                    </span>
                   )}
                   {job.location.isHybrid && (
-                    <span className="text-blue-600">Hybrid</span>
+                    <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-900/30 text-blue-300 text-xs font-medium">
+                      Hybrid
+                    </span>
                   )}
                 </div>
                 <Link 
                   href={`/jobs/${job.id}`}
-                  className="text-blue-600 hover:text-blue-800 font-medium"
+                  className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group"
                 >
-                  View Details →
+                  <span>View Details</span>
+                  <span className="ml-1 transition-transform duration-200 group-hover:translate-x-1">→</span>
                 </Link>
               </div>
             </div>

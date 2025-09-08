@@ -52,14 +52,14 @@ export function JobTags({ jobData, className = '' }: JobTagsProps) {
 
   return (
     <div className={className}>
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">Tags</h2>
+      <h2 className="text-xl font-semibold text-white mb-6">Tags</h2>
       
       <div className="space-y-6">
         {visibleCategories.map(category => (
-          <div key={category.name} className="bg-gray-50 rounded-lg p-4">
+          <div key={category.name} className="bg-gray-900/30 border border-gray-800 rounded-lg p-4">
             <div className="mb-3">
-              <h3 className="text-sm font-medium text-gray-700 mb-1">{category.name}</h3>
-              <p className="text-xs text-gray-500">{category.description}</p>
+              <h3 className="text-sm font-medium text-gray-200 mb-1">{category.name}</h3>
+              <p className="text-xs text-gray-400">{category.description}</p>
             </div>
             
             <div className="flex flex-wrap gap-2">
@@ -78,8 +78,8 @@ export function JobTags({ jobData, className = '' }: JobTagsProps) {
       
       {/* Additional info if data is available */}
       {(jobData.primary_responsibilities || jobData.tools_platforms || jobData.technical_skills) && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <p className="text-xs text-blue-700">
+        <div className="mt-4 p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg">
+          <p className="text-xs text-blue-300">
             <span className="font-medium">Tags extracted from:</span> Job requirements, responsibilities, and skills data
           </p>
         </div>

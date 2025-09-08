@@ -12,7 +12,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
   if (!rawHtml) {
     return (
       <div className={className}>
-        <p className="text-gray-500 italic">No job description available.</p>
+        <p className="text-gray-400 italic">No job description available.</p>
       </div>
     );
   }
@@ -43,8 +43,8 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
         const bulletText = line.substring(2).trim();
         elements.push(
           <div key={key++} className="flex items-start mb-2">
-            <span className="text-blue-600 mr-2 mt-1 flex-shrink-0">•</span>
-            <span className="text-gray-700 leading-relaxed">{renderInlineFormatting(bulletText)}</span>
+            <span className="text-blue-400 mr-2 mt-1 flex-shrink-0">•</span>
+            <span className="text-gray-300 leading-relaxed">{renderInlineFormatting(bulletText)}</span>
           </div>
         );
       }
@@ -52,7 +52,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
       else if (line.startsWith('**') && line.endsWith('**')) {
         const headerText = line.slice(2, -2);
         elements.push(
-          <h3 key={key++} className="text-lg font-semibold text-gray-900 mt-6 mb-3">
+          <h3 key={key++} className="text-lg font-semibold text-white mt-6 mb-3">
             {headerText}
           </h3>
         );
@@ -60,7 +60,7 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
       // Regular paragraph text
       else {
         elements.push(
-          <p key={key++} className="text-gray-700 leading-relaxed mb-4">
+          <p key={key++} className="text-gray-300 leading-relaxed mb-4">
             {renderInlineFormatting(line)}
           </p>
         );

@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.className} antialiased bg-gray-50`}
+        className={`${inter.className} antialiased bg-black text-white`}
       >
         <Header />
         <main className="min-h-screen">

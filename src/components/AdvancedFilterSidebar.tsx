@@ -127,17 +127,18 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
       />
       
       {/* Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-xl z-40 overflow-y-auto">
-        <div className="p-6">
+      <div className="fixed left-0 top-0 h-full w-80 bg-black border-r border-gray-800 shadow-2xl z-40 overflow-y-auto">
+        {/* Add padding for fixed header */}
+        <div className="pt-16 p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+            <h2 className="text-lg font-semibold text-white flex items-center">
               <Sliders className="h-5 w-5 mr-2" />
               Advanced Filters
             </h2>
             <button
               onClick={onToggle}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-200 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -146,7 +147,7 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
           {/* Clear All */}
           <button
             onClick={clearAllFilters}
-            className="text-sm text-blue-600 hover:text-blue-800 mb-4"
+            className="text-sm text-blue-400 hover:text-blue-300 mb-4 transition-colors"
           >
             Clear all filters
           </button>
@@ -154,26 +155,26 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
           <div className="space-y-6">
             {/* Salary Range */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Salary Range (USD)</h3>
+              <h3 className="font-medium text-white mb-3">Salary Range (USD)</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Min (K)</label>
+                  <label className="block text-sm text-gray-400 mb-1">Min (K)</label>
                   <input
                     type="number"
                     placeholder="80"
                     value={filters.salaryMin ? Math.floor(filters.salaryMin / 1000) : ''}
                     onChange={(e) => handleSalaryChange('min', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input-modern w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Max (K)</label>
+                  <label className="block text-sm text-gray-400 mb-1">Max (K)</label>
                   <input
                     type="number"
                     placeholder="200"
                     value={filters.salaryMax ? Math.floor(filters.salaryMax / 1000) : ''}
                     onChange={(e) => handleSalaryChange('max', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input-modern w-full"
                   />
                 </div>
               </div>
@@ -181,7 +182,7 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Skills & Tags */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3 flex items-center">
+              <h3 className="font-medium text-white mb-3 flex items-center">
                 <Hash className="h-4 w-4 mr-2" />
                 Skills & Tags
               </h3>
@@ -189,12 +190,12 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
               {/* Show active tags */}
               {filters.activeTags && filters.activeTags.length > 0 && (
                 <div className="mb-3">
-                  <h4 className="text-sm text-gray-600 mb-2">Active Tags:</h4>
+                  <h4 className="text-sm text-gray-400 mb-2">Active Tags:</h4>
                   <div className="flex flex-wrap gap-1">
                     {filters.activeTags.map((tag, index) => (
                       <span
                         key={`${tag.category}-${tag.label}-${index}`}
-                        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-pointer ${tag.color || 'bg-gray-100 text-gray-800'}`}
+                        className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-pointer bg-blue-900/30 text-blue-300 border border-blue-800/50 hover:bg-blue-900/50 transition-colors"
                         onClick={() => handleTagToggle(tag)}
                       >
                         {tag.label}
@@ -214,15 +215,15 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
                   const isExpanded = expandedTagCategories.has(categoryKey)
                   
                   return (
-                    <div key={categoryKey} className="border border-gray-200 rounded-lg">
+                    <div key={categoryKey} className="border border-gray-800 rounded-lg bg-gray-900/20">
                       <button
                         onClick={() => toggleTagCategory(categoryKey)}
-                        className="w-full px-3 py-2 text-left flex items-center justify-between bg-gray-50 hover:bg-gray-100 rounded-t-lg"
+                        className="w-full px-3 py-2 text-left flex items-center justify-between bg-gray-800/30 hover:bg-gray-800/50 rounded-t-lg transition-colors"
                       >
-                        <span className="text-sm font-medium text-gray-700">{categoryInfo.label}</span>
+                        <span className="text-sm font-medium text-gray-200">{categoryInfo.label}</span>
                         <div className="flex items-center">
-                          <span className="text-xs text-gray-500 mr-2">({tags.length})</span>
-                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          <span className="text-xs text-gray-400 mr-2">({tags.length})</span>
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                         </div>
                       </button>
                       
@@ -237,8 +238,8 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
                                   onClick={() => handleTagToggle(tag)}
                                   className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
                                     isSelected 
-                                      ? tag.color || 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                      ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50'
+                                      : 'bg-gray-800/50 text-gray-300 hover:bg-gray-800/70 border border-gray-700/50'
                                   }`}
                                 >
                                   {tag.label}
@@ -247,7 +248,7 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
                             })}
                           </div>
                           {tags.length > 20 && (
-                            <p className="text-xs text-gray-500 mt-2">+{tags.length - 20} more...</p>
+                            <p className="text-xs text-gray-400 mt-2">+{tags.length - 20} more...</p>
                           )}
                         </div>
                       )}
@@ -259,17 +260,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Industry Vertical */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Industry Vertical</h3>
+              <h3 className="font-medium text-white mb-3">Industry Vertical</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {industryVerticalOptions.map((vertical) => (
-                  <label key={vertical} className="flex items-center">
+                  <label key={vertical} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.industryVertical?.includes(vertical) || false}
                       onChange={() => handleMultiSelectChange('industryVertical', vertical, filters.industryVertical)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{vertical}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{vertical}</span>
                   </label>
                 ))}
               </div>
@@ -277,17 +278,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Experience Bucket */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Experience Bucket</h3>
+              <h3 className="font-medium text-white mb-3">Experience Bucket</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {experienceBucketOptions.map((bucket) => (
-                  <label key={bucket} className="flex items-center">
+                  <label key={bucket} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.experienceBucket?.includes(bucket) || false}
                       onChange={() => handleMultiSelectChange('experienceBucket', bucket, filters.experienceBucket)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{bucket}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{bucket}</span>
                   </label>
                 ))}
               </div>
@@ -295,17 +296,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Domain Expertise */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Domain Expertise</h3>
+              <h3 className="font-medium text-white mb-3">Domain Expertise</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {domainExpertiseOptions.map((domain) => (
-                  <label key={domain} className="flex items-center">
+                  <label key={domain} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.domainExpertise?.includes(domain) || false}
                       onChange={() => handleMultiSelectChange('domainExpertise', domain, filters.domainExpertise)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{domain}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{domain}</span>
                   </label>
                 ))}
               </div>
@@ -313,17 +314,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Company Stage */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Company Stage</h3>
+              <h3 className="font-medium text-white mb-3">Company Stage</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {companyStageOptions.map((stage) => (
-                  <label key={stage} className="flex items-center">
+                  <label key={stage} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.companyStage?.includes(stage) || false}
                       onChange={() => handleMultiSelectChange('companyStage', stage, filters.companyStage)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{stage}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{stage}</span>
                   </label>
                 ))}
               </div>
@@ -331,17 +332,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Product Lifecycle */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Product Lifecycle</h3>
+              <h3 className="font-medium text-white mb-3">Product Lifecycle</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {productLifecycleOptions.map((lifecycle) => (
-                  <label key={lifecycle} className="flex items-center">
+                  <label key={lifecycle} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.productLifecycle?.includes(lifecycle) || false}
                       onChange={() => handleMultiSelectChange('productLifecycle', lifecycle, filters.productLifecycle)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{lifecycle}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{lifecycle}</span>
                   </label>
                 ))}
               </div>
@@ -349,17 +350,17 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Product Domain */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Product Domain</h3>
+              <h3 className="font-medium text-white mb-3">Product Domain</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {productDomainOptions.map((domain) => (
-                  <label key={domain} className="flex items-center">
+                  <label key={domain} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.productDomain?.includes(domain) || false}
                       onChange={() => handleMultiSelectChange('productDomain', domain, filters.productDomain)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{domain}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{domain}</span>
                   </label>
                 ))}
               </div>
@@ -367,22 +368,24 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
 
             {/* Management Scope */}
             <div>
-              <h3 className="font-medium text-gray-900 mb-3">Management Scope</h3>
+              <h3 className="font-medium text-white mb-3">Management Scope</h3>
               <div className="space-y-2 max-h-40 overflow-y-auto">
                 {managementScopeOptions.map((scope) => (
-                  <label key={scope} className="flex items-center">
+                  <label key={scope} className="flex items-center group cursor-pointer">
                     <input
                       type="checkbox"
                       checked={filters.managementScope?.includes(scope) || false}
                       onChange={() => handleMultiSelectChange('managementScope', scope, filters.managementScope)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
                     />
-                    <span className="ml-2 text-sm text-gray-700">{scope}</span>
+                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{scope}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
+          {/* Add bottom padding to ensure content isn't cut off */}
+          <div className="pb-6"></div>
         </div>
       </div>
     </>
