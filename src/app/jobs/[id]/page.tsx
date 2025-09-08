@@ -10,7 +10,7 @@ import { CompanySidebar } from '@/components/CompanySidebar'
 import { formatCamelCase, getFormattedLocation } from '@/lib/tag-extraction'
 import { formatJobDate } from '@/lib/data-mapper'
 import { TagBadge } from '@/components/ui/TagBadge'
-import { ArrowLeft, MapPin, Clock, Building, DollarSign, ExternalLink, Calendar } from 'lucide-react'
+import { ArrowLeft, MapPin, Clock, Building, DollarSign, ExternalLink, Calendar, Briefcase } from 'lucide-react'
 
 export default function JobDetailPage() {
   const params = useParams()
@@ -98,9 +98,9 @@ export default function JobDetailPage() {
   // Helper function to format salary
   const formatSalary = (min?: number, max?: number, currency: string = 'USD') => {
     if (!min && !max) return null;
-    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} ${currency}`;
-    if (min) return `$${min.toLocaleString()}+ ${currency}`;
-    if (max) return `Up to $${max.toLocaleString()} ${currency}`;
+    if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+    if (min) return `$${min.toLocaleString()}+`;
+    if (max) return `Up to $${max.toLocaleString()}`;
     return null;
   };
 
@@ -132,10 +132,22 @@ export default function JobDetailPage() {
                     <MapPin className="h-5 w-5 mr-2" />
                     <span>{getFormattedLocation(jobData)}</span>
                   </div>
+                  {jobData.work_arrangement && (
+                    <div className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2" />
+                      <span>{formatCamelCase(jobData.work_arrangement)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center">
                     <Calendar className="h-5 w-5 mr-2" />
                     <span>{formatJobDate(jobData.posted || jobData.created_at)}</span>
                   </div>
+                  {jobData.employment_type && jobData.employment_type.toLowerCase() !== 'null' && jobData.employment_type.toLowerCase() !== 'none' && (
+                    <div className="flex items-center">
+                      <Briefcase className="h-5 w-5 mr-2" />
+                      <span>{formatCamelCase(jobData.employment_type)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="text-right">
@@ -151,37 +163,6 @@ export default function JobDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Apply Button */}
-            {jobData.apply_url && (
-              <div className="mb-6">
-                <a
-                  href={jobData.apply_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Apply for this position
-                  <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </div>
-            )}
-
-            {/* Work Arrangement Tags */}
-            <div className="flex flex-wrap gap-2">
-              {jobData.employment_type && (
-                <TagBadge label={formatCamelCase(jobData.employment_type)} color="gray" />
-              )}
-              {jobData.is_remote === 1 && (
-                <TagBadge label="Remote" color="green" />
-              )}
-              {jobData.is_hybrid === 1 && (
-                <TagBadge label="Hybrid" color="blue" />
-              )}
-              {jobData.is_ai_ml && (
-                <TagBadge label="AI/ML" color="purple" />
-              )}
             </div>
           </div>
 

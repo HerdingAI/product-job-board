@@ -235,15 +235,13 @@ function extractCompanyValues(description: string | null): string[] {
   return Array.from(new Set(foundValues));
 }
 
-// Helper function for CamelCase formatting
-function formatCamelCase(text: string): string {
-  if (!text) return '';
-  
-  return text
-    .split(/[\s_-]+/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-}
+import { formatCamelCase } from './text-formatter';
+import { 
+  formatLocation as formatLocationUtil, 
+  formatExperience as formatExperienceUtil, 
+  formatProductContext as formatProductContextUtil, 
+  formatManagementInfo as formatManagementInfoUtil 
+} from './location-formatter';
 
 // Location formatting utilities
 export interface LocationInfo {
@@ -252,33 +250,7 @@ export interface LocationInfo {
 }
 
 export function formatLocation(jobData: any): LocationInfo {
-  const tags: string[] = [];
-  let primary = 'Location TBD';
-  
-  // Primary location
-  if (jobData.location_metro) {
-    primary = jobData.location_metro;
-  } else if (jobData.location_city && jobData.location_state) {
-    primary = `${jobData.location_city}, ${jobData.location_state}`;
-  } else if (jobData.location_city) {
-    primary = jobData.location_city;
-  }
-  
-  // Work arrangement tags
-  if (jobData.is_remote === 1) {
-    tags.push('Remote');
-  }
-  if (jobData.is_hybrid === 1) {
-    tags.push('Hybrid');
-  }
-  if (jobData.work_arrangement) {
-    const arrangement = formatWorkArrangement(jobData.work_arrangement);
-    if (arrangement && !tags.includes(arrangement)) {
-      tags.push(arrangement);
-    }
-  }
-  
-  return { primary, tags };
+  return formatLocationUtil(jobData);
 }
 
 // Experience formatting utilities
@@ -288,22 +260,7 @@ export interface ExperienceInfo {
 }
 
 export function formatExperience(jobData: any): ExperienceInfo {
-  const tags: string[] = [];
-  let formatted = 'Experience TBD';
-  
-  // Years of experience
-  if (jobData.years_experience_min && jobData.years_experience_max) {
-    formatted = `${jobData.years_experience_min}-${jobData.years_experience_max} years`;
-  } else if (jobData.years_experience_min) {
-    formatted = `${jobData.years_experience_min}+ years`;
-  }
-  
-  // Seniority level tag
-  if (jobData.seniority_level) {
-    tags.push(formatCamelCase(jobData.seniority_level));
-  }
-  
-  return { formatted, tags };
+  return formatExperienceUtil(jobData);
 }
 
 // Product context formatting utilities
@@ -312,29 +269,7 @@ export interface ProductContextInfo {
 }
 
 export function formatProductContext(jobData: any): ProductContextInfo {
-  const tags: string[] = [];
-  
-  if (jobData.product_lifecycle_focus) {
-    tags.push(formatCamelCase(jobData.product_lifecycle_focus));
-  }
-  
-  if (jobData.product_domain) {
-    tags.push(formatCamelCase(jobData.product_domain));
-  }
-  
-  if (jobData.domain_expertise) {
-    const domains = Array.isArray(jobData.domain_expertise) 
-      ? jobData.domain_expertise 
-      : [jobData.domain_expertise];
-    
-    domains.forEach((domain: string) => {
-      if (domain) {
-        tags.push(formatCamelCase(domain));
-      }
-    });
-  }
-  
-  return { tags };
+  return formatProductContextUtil(jobData);
 }
 
 // Management information formatting utilities
@@ -343,19 +278,5 @@ export interface ManagementInfo {
 }
 
 export function formatManagementInfo(jobData: any): ManagementInfo {
-  const tags: string[] = [];
-  
-  if (jobData.reporting_structure) {
-    tags.push(formatCamelCase(jobData.reporting_structure));
-  }
-  
-  if (jobData.team_size_direct) {
-    tags.push(`${jobData.team_size_direct} Direct Reports`);
-  }
-  
-  if (jobData.team_size_indirect) {
-    tags.push(`${jobData.team_size_indirect} Indirect Reports`);
-  }
-  
-  return { tags };
+  return formatManagementInfoUtil(jobData);
 }

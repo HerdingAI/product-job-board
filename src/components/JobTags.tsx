@@ -10,23 +10,33 @@ interface JobTagsProps {
 export function JobTags({ jobData, className = '' }: JobTagsProps) {
   const extractedTags = extractJobTags(jobData);
   
+  // Helper function to check if a value should be displayed
+  const shouldDisplayValue = (value: any): boolean => {
+    if (!value) return false;
+    if (typeof value === 'string') {
+      const lowerValue = value.toLowerCase().trim();
+      return lowerValue !== 'null' && lowerValue !== 'none' && lowerValue !== '';
+    }
+    return true;
+  };
+  
   // Only show content tags here (responsibilities, tools, technical)
   const contentCategories = [
     { 
       name: 'Responsibilities', 
-      tags: extractedTags.responsibilities,
+      tags: extractedTags.responsibilities.filter(tag => shouldDisplayValue(tag)),
       color: 'blue' as const,
       description: 'Key areas of responsibility'
     },
     { 
       name: 'Tools & Platforms', 
-      tags: extractedTags.tools,
+      tags: extractedTags.tools.filter(tag => shouldDisplayValue(tag)),
       color: 'green' as const,
       description: 'Tools and platforms used'
     },
     { 
       name: 'Technical Skills', 
-      tags: extractedTags.technical,
+      tags: extractedTags.technical.filter(tag => shouldDisplayValue(tag)),
       color: 'purple' as const,
       description: 'Technical skills required'
     }

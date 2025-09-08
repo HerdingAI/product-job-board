@@ -10,32 +10,107 @@ export function formatCamelCase(text: string): string {
   
   // Handle special cases first
   const specialCases: Record<string, string> = {
+    // Revenue and metrics
     'revenue_arr': 'Revenue ARR',
     'user_growth': 'User Growth',
+    'churn_rate': 'Churn Rate',
+    'conversion_rate': 'Conversion Rate',
+    'customer_acquisition': 'Customer Acquisition',
+    'ltv_cac': 'LTV/CAC',
+    'monthly_recurring_revenue': 'Monthly Recurring Revenue',
+    'annual_recurring_revenue': 'Annual Recurring Revenue',
     'retention': 'Retention',
+    
+    // Technical terms
     'api': 'API',
     'apis': 'APIs',
     'ai_ml': 'AI/ML',
     'ai': 'AI',
     'ml': 'ML',
-    'b2b_enterprise': 'B2B Enterprise',
+    'ui_ux': 'UI/UX',
+    'ui': 'UI',
+    'ux': 'UX',
+    'sql': 'SQL',
+    'nosql': 'NoSQL',
+    'aws': 'AWS',
+    'gcp': 'GCP',
+    'azure': 'Azure',
+    'saas': 'SaaS',
+    'paas': 'PaaS',
+    'iaas': 'IaaS',
+    'sdk': 'SDK',
+    'cdn': 'CDN',
+    'devops': 'DevOps',
+    'cicd': 'CI/CD',
+    'ci_cd': 'CI/CD',
+    
+    // Business models and company info
     'b2b': 'B2B',
     'b2c': 'B2C',
-    'saas': 'SaaS',
-    'remote_us': 'Remote (US)',
-    'hybrid_only': 'Hybrid Only',
+    'b2b2c': 'B2B2C',
+    'c2c': 'C2C',
+    'b2g': 'B2G',
+    'b2b_enterprise': 'B2B Enterprise',
+    'b2b_smb': 'B2B SMB',
+    'b2c_consumer': 'B2C Consumer',
+    
+    // Company stages
     'series_a': 'Series A',
     'series_b': 'Series B',
     'series_c': 'Series C',
     'series_d': 'Series D',
+    'series_e': 'Series E',
+    'pre_ipo': 'Pre-IPO',
     'ipo': 'IPO',
+    'public': 'Public',
     'startup': 'Startup',
+    'scaleup': 'Scale-up',
     'growth': 'Growth Stage',
     'enterprise': 'Enterprise',
-    'fintech': 'Fintech',
+    'fortune_500': 'Fortune 500',
+    'unicorn': 'Unicorn',
+    'decacorn': 'Decacorn',
+    
+    // Work arrangements
+    'remote_us': 'Remote (US)',
+    'remote_global': 'Remote (Global)',
+    'hybrid_only': 'Hybrid Only',
+    'onsite_only': 'On-site Only',
+    'flexible_remote': 'Flexible Remote',
+    'remote_first': 'Remote First',
+    'office_first': 'Office First',
+    
+    // Industries
+    'fintech': 'FinTech',
     'healthtech': 'HealthTech',
     'edtech': 'EdTech',
-    'cloud_platforms': 'Cloud Platforms',
+    'proptech': 'PropTech',
+    'regtech': 'RegTech',
+    'adtech': 'AdTech',
+    'martech': 'MarTech',
+    'insurtech': 'InsurTech',
+    'biotech': 'BioTech',
+    'cleantech': 'CleanTech',
+    'cybersecurity': 'Cybersecurity',
+    
+    // Product management terms
+    'product_lifecycle': 'Product Lifecycle',
+    'go_to_market': 'Go-to-Market',
+    'gtm': 'GTM',
+    'mvp': 'MVP',
+    'poc': 'POC',
+    'kpi': 'KPI',
+    'kpis': 'KPIs',
+    'okr': 'OKR',
+    'okrs': 'OKRs',
+    'roi': 'ROI',
+    'roas': 'ROAS',
+    
+    // Management and leadership
+    'cross_functional': 'Cross-functional',
+    'direct_reports': 'Direct Reports',
+    'indirect_reports': 'Indirect Reports',
+    'stakeholder_management': 'Stakeholder Management',
     'reports_to_gm': 'Reports to GM',
     'reports_to_ceo': 'Reports to CEO',
     'reports_to_cpo': 'Reports to CPO',
@@ -47,7 +122,29 @@ export function formatCamelCase(text: string): string {
     'product_manager': 'Product Manager',
     'technical_pm': 'Technical PM',
     'growth_pm': 'Growth PM',
-    'data_pm': 'Data PM'
+    'data_pm': 'Data PM',
+    
+    // Platform and tools
+    'cloud_platforms': 'Cloud Platforms',
+    'docker': 'Docker',
+    'kubernetes': 'Kubernetes',
+    'react': 'React',
+    'vue': 'Vue',
+    'angular': 'Angular',
+    'node_js': 'Node.js',
+    'python': 'Python',
+    'javascript': 'JavaScript',
+    'typescript': 'TypeScript',
+    
+    // Common abbreviations
+    'usa': 'USA',
+    'uk': 'UK',
+    'eu': 'EU',
+    'apac': 'APAC',
+    'emea': 'EMEA',
+    'nyc': 'NYC',
+    'sf': 'SF',
+    'la': 'LA'
   };
   
   const lowerText = text.toLowerCase();
