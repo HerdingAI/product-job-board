@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { FilterState, Tag } from '@/lib/types'
-import { ChevronDown, ChevronUp, X, Sliders, Hash } from 'lucide-react'
+import { ChevronDown, ChevronUp, X, Sliders, Hash, Building, Briefcase, User, Target, Layers, Boxes } from 'lucide-react'
 import { TAG_CATEGORIES, getAllUniqueTagsFromJobs } from '@/lib/tag-parser'
 import { AppJob } from '@/lib/types'
 
@@ -26,6 +26,9 @@ interface AdvancedFilterSidebarProps {
 
 export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggle, jobs = [], actualFilterValues }: AdvancedFilterSidebarProps) {
   const [expandedTagCategories, setExpandedTagCategories] = useState<Set<string>>(new Set(['core-pm']))
+  const [expandedFilterCategories, setExpandedFilterCategories] = useState<Set<string>>(
+    new Set(['company-stage', 'product-domain']) // Start with most common ones expanded
+  )
   
   // Extract unique tags from jobs for filter options
   const availableTags = getAllUniqueTagsFromJobs(jobs)
@@ -95,6 +98,84 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
     setExpandedTagCategories(newExpanded)
   }
 
+  const toggleFilterCategory = (category: string) => {
+    const newExpanded = new Set(expandedFilterCategories)
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category)
+    } else {
+      newExpanded.add(category)
+    }
+    setExpandedFilterCategories(newExpanded)
+  }
+
+  const handleFilterChipToggle = (filterKey: keyof FilterState, value: string) => {
+    const currentValues = (filters[filterKey] as string[]) || []
+    const updated = currentValues.includes(value)
+      ? currentValues.filter(v => v !== value)
+      : [...currentValues, value]
+    onFilterChange({ [filterKey]: updated })
+  }
+
+  const FilterCategoryChips = ({ 
+    categoryKey, 
+    title, 
+    options, 
+    selectedValues, 
+    filterKey,
+    icon 
+  }: {
+    categoryKey: string
+    title: string
+    options: string[]
+    selectedValues: string[]
+    filterKey: keyof FilterState
+    icon?: React.ReactNode
+  }) => {
+    if (options.length === 0) return null
+    
+    const isExpanded = expandedFilterCategories.has(categoryKey)
+    
+    return (
+      <div className="border border-gray-800 rounded-lg bg-gray-900/20">
+        <button
+          onClick={() => toggleFilterCategory(categoryKey)}
+          className="w-full px-3 py-2 text-left flex items-center justify-between bg-gray-800/30 hover:bg-gray-800/50 rounded-t-lg transition-colors"
+        >
+          <span className="text-sm font-medium text-gray-200 flex items-center">
+            {icon && <span className="mr-2">{icon}</span>}
+            {title}
+          </span>
+          <div className="flex items-center">
+            {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+          </div>
+        </button>
+        
+        {isExpanded && (
+          <div className="p-3 max-h-32 overflow-y-auto">
+            <div className="flex flex-wrap gap-1">
+              {options.map((option) => {
+                const isSelected = selectedValues.includes(option)
+                return (
+                  <button
+                    key={option}
+                    onClick={() => handleFilterChipToggle(filterKey, option)}
+                    className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+                      isSelected 
+                        ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50'
+                        : 'bg-gray-800/50 text-gray-300 hover:bg-gray-800/70 border border-gray-700/50'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const clearAllFilters = () => {
     onFilterChange({
       companyStage: [],
@@ -108,6 +189,9 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
       salaryMin: undefined,
       salaryMax: undefined
     })
+    
+    // Reset expanded states
+    setExpandedFilterCategories(new Set(['company-stage', 'product-domain']))
   }
 
   if (!isOpen) {
@@ -154,6 +238,36 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
           >
             Clear all filters
           </button>
+
+          {/* Active Filters Summary */}
+          {(filters.companyStage?.length || filters.productLifecycle?.length || 
+            filters.productDomain?.length || filters.managementScope?.length || 
+            filters.industryVertical?.length || filters.experienceBucket?.length || 
+            filters.domainExpertise?.length) && (
+            <div className="mb-4 p-3 bg-blue-950/20 border border-blue-800/30 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-300 mb-2">Active Filters</h4>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  ...(filters.companyStage?.map(s => ({ label: s, key: 'companyStage' as keyof FilterState })) || []),
+                  ...(filters.productLifecycle?.map(s => ({ label: s, key: 'productLifecycle' as keyof FilterState })) || []),
+                  ...(filters.productDomain?.map(s => ({ label: s, key: 'productDomain' as keyof FilterState })) || []),
+                  ...(filters.managementScope?.map(s => ({ label: s, key: 'managementScope' as keyof FilterState })) || []),
+                  ...(filters.industryVertical?.map(s => ({ label: s, key: 'industryVertical' as keyof FilterState })) || []),
+                  ...(filters.experienceBucket?.map(s => ({ label: s, key: 'experienceBucket' as keyof FilterState })) || []),
+                  ...(filters.domainExpertise?.map(s => ({ label: s, key: 'domainExpertise' as keyof FilterState })) || [])
+                ].map((filter, index) => (
+                  <span
+                    key={`${filter.key}-${filter.label}-${index}`}
+                    className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium cursor-pointer bg-blue-900/40 text-blue-200 border border-blue-700/50 hover:bg-blue-900/60 transition-colors"
+                    onClick={() => handleFilterChipToggle(filter.key, filter.label)}
+                  >
+                    {filter.label}
+                    <X className="ml-1 h-3 w-3" />
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-6">
             {/* Salary Range */}
@@ -241,7 +355,6 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
                       >
                         <span className="text-sm font-medium text-gray-200">{categoryInfo.label}</span>
                         <div className="flex items-center">
-                          <span className="text-xs text-gray-400 mr-2">({tags.length})</span>
                           {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
                         </div>
                       </button>
@@ -277,129 +390,84 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
               </div>
             </div>
 
-            {/* Industry Vertical */}
+            {/* Professional Experience Group */}
             <div>
-              <h3 className="font-medium text-white mb-3">Industry Vertical</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {industryVerticalOptions.map((vertical) => (
-                  <label key={vertical} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.industryVertical?.includes(vertical) || false}
-                      onChange={() => handleMultiSelectChange('industryVertical', vertical, filters.industryVertical)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{vertical}</span>
-                  </label>
-                ))}
+              <h3 className="font-medium text-white mb-3 text-base">Professional Experience</h3>
+              <div className="space-y-3">
+                <FilterCategoryChips
+                  categoryKey="experience-bucket"
+                  title="Experience Level"
+                  options={experienceBucketOptions}
+                  selectedValues={filters.experienceBucket || []}
+                  filterKey="experienceBucket"
+                  icon={<User className="h-4 w-4" />}
+                />
+                
+                <FilterCategoryChips
+                  categoryKey="management-scope"
+                  title="Management Scope"
+                  options={managementScopeOptions}
+                  selectedValues={filters.managementScope || []}
+                  filterKey="managementScope"
+                  icon={<Briefcase className="h-4 w-4" />}
+                />
+                
+                <FilterCategoryChips
+                  categoryKey="domain-expertise"
+                  title="Domain Expertise"
+                  options={domainExpertiseOptions}
+                  selectedValues={filters.domainExpertise || []}
+                  filterKey="domainExpertise"
+                  icon={<Target className="h-4 w-4" />}
+                />
               </div>
             </div>
 
-            {/* Experience Bucket */}
+            {/* Company & Product Group */}
             <div>
-              <h3 className="font-medium text-white mb-3">Experience Bucket</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {experienceBucketOptions.map((bucket) => (
-                  <label key={bucket} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.experienceBucket?.includes(bucket) || false}
-                      onChange={() => handleMultiSelectChange('experienceBucket', bucket, filters.experienceBucket)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{bucket}</span>
-                  </label>
-                ))}
+              <h3 className="font-medium text-white mb-3 text-base">Company & Product</h3>
+              <div className="space-y-3">
+                <FilterCategoryChips
+                  categoryKey="company-stage"
+                  title="Company Stage"
+                  options={companyStageOptions}
+                  selectedValues={filters.companyStage || []}
+                  filterKey="companyStage"
+                  icon={<Building className="h-4 w-4" />}
+                />
+                
+                <FilterCategoryChips
+                  categoryKey="product-lifecycle"
+                  title="Product Lifecycle"
+                  options={productLifecycleOptions}
+                  selectedValues={filters.productLifecycle || []}
+                  filterKey="productLifecycle"
+                  icon={<Layers className="h-4 w-4" />}
+                />
+                
+                <FilterCategoryChips
+                  categoryKey="product-domain"
+                  title="Product Domain"
+                  options={productDomainOptions}
+                  selectedValues={filters.productDomain || []}
+                  filterKey="productDomain"
+                  icon={<Boxes className="h-4 w-4" />}
+                />
               </div>
             </div>
 
-            {/* Domain Expertise */}
+            {/* Industry Group */}
             <div>
-              <h3 className="font-medium text-white mb-3">Domain Expertise</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {domainExpertiseOptions.map((domain) => (
-                  <label key={domain} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.domainExpertise?.includes(domain) || false}
-                      onChange={() => handleMultiSelectChange('domainExpertise', domain, filters.domainExpertise)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{domain}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Company Stage */}
-            <div>
-              <h3 className="font-medium text-white mb-3">Company Stage</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {companyStageOptions.map((stage) => (
-                  <label key={stage} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.companyStage?.includes(stage) || false}
-                      onChange={() => handleMultiSelectChange('companyStage', stage, filters.companyStage)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{stage}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Product Lifecycle */}
-            <div>
-              <h3 className="font-medium text-white mb-3">Product Lifecycle</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {productLifecycleOptions.map((lifecycle) => (
-                  <label key={lifecycle} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.productLifecycle?.includes(lifecycle) || false}
-                      onChange={() => handleMultiSelectChange('productLifecycle', lifecycle, filters.productLifecycle)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{lifecycle}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Product Domain */}
-            <div>
-              <h3 className="font-medium text-white mb-3">Product Domain</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {productDomainOptions.map((domain) => (
-                  <label key={domain} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.productDomain?.includes(domain) || false}
-                      onChange={() => handleMultiSelectChange('productDomain', domain, filters.productDomain)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{domain}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Management Scope */}
-            <div>
-              <h3 className="font-medium text-white mb-3">Management Scope</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {managementScopeOptions.map((scope) => (
-                  <label key={scope} className="flex items-center group cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={filters.managementScope?.includes(scope) || false}
-                      onChange={() => handleMultiSelectChange('managementScope', scope, filters.managementScope)}
-                      className="rounded border-gray-600 bg-gray-800 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                    />
-                    <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">{scope}</span>
-                  </label>
-                ))}
+              <h3 className="font-medium text-white mb-3 text-base">Industry</h3>
+              <div className="space-y-3">
+                <FilterCategoryChips
+                  categoryKey="industry-vertical"
+                  title="Industry Vertical"
+                  options={industryVerticalOptions}
+                  selectedValues={filters.industryVertical || []}
+                  filterKey="industryVertical"
+                  icon={<Building className="h-4 w-4" />}
+                />
               </div>
             </div>
           </div>

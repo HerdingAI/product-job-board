@@ -22,21 +22,6 @@ export const TAG_CATEGORIES = {
     label: 'Domain Expertise',
     color: 'bg-purple-100 text-purple-800', 
     priority: 3
-  },
-  'leadership': {
-    label: 'Leadership Skills',
-    color: 'bg-orange-100 text-orange-800',
-    priority: 4
-  },
-  'methodology': {
-    label: 'Product Methodology',
-    color: 'bg-pink-100 text-pink-800',
-    priority: 5
-  },
-  'responsibilities': {
-    label: 'Key Responsibilities',
-    color: 'bg-gray-100 text-gray-800',
-    priority: 6
   }
 } as const
 
@@ -114,24 +99,7 @@ const DOMAIN_EXPERTISE_MAP: Record<string, string> = {
   'devtools': 'Developer Tools'
 }
 
-// Leadership Skills mapping
-const LEADERSHIP_SKILLS_MAP: Record<string, string> = {
-  'team management': 'Team Management',
-  'cross-functional': 'Cross-functional Leadership',
-  'mentoring': 'Mentoring',
-  'hiring': 'Hiring & Recruiting',
-  'performance management': 'Performance Management',
-  'communication': 'Communication',
-  'presentation': 'Presentation Skills',
-  'negotiation': 'Negotiation',
-  'influence': 'Influence & Persuasion',
-  'change management': 'Change Management',
-  'project management': 'Project Management',
-  'agile': 'Agile Leadership',
-  'scrum': 'Scrum Master',
-  'coaching': 'Team Coaching',
-  'conflict resolution': 'Conflict Resolution'
-}
+// --- HELPER FUNCTIONS ---
 
 /**
  * Parse comma-separated or array fields into structured tags
@@ -181,63 +149,6 @@ function extractKeywordsFromText(text: string, skillMap: Record<string, string>)
 }
 
 /**
- * Extract methodology tags from product methodology arrays
- */
-function extractMethodologyTags(methodology: string[] | string | Record<string, unknown> | null | undefined): Tag[] {
-  if (!methodology) return []
-  
-  let methods: string[] = []
-  
-  if (Array.isArray(methodology)) {
-    methods = methodology
-  } else if (typeof methodology === 'string') {
-    try {
-      const parsed = JSON.parse(methodology)
-      methods = Array.isArray(parsed) ? parsed : [methodology]
-    } catch {
-      methods = [methodology]
-    }
-  }
-  
-  return methods
-    .filter(method => method && typeof method === 'string')
-    .map(method => ({
-      label: method.trim(),
-      category: 'methodology' as const,
-      color: TAG_CATEGORIES.methodology.color
-    }))
-}
-
-/**
- * Extract responsibility tags from primary responsibilities arrays
- */
-function extractResponsibilityTags(responsibilities: string[] | string | Record<string, unknown> | null | undefined): Tag[] {
-  if (!responsibilities) return []
-  
-  let respList: string[] = []
-  
-  if (Array.isArray(responsibilities)) {
-    respList = responsibilities
-  } else if (typeof responsibilities === 'string') {
-    try {
-      const parsed = JSON.parse(responsibilities)
-      respList = Array.isArray(parsed) ? parsed : [responsibilities]
-    } catch {
-      respList = [responsibilities]
-    }
-  }
-  
-  return respList
-    .filter(resp => resp && typeof resp === 'string')
-    .slice(0, 5) // Limit to top 5 responsibilities
-    .map(resp => ({
-      label: resp.trim().length > 30 ? resp.trim().substring(0, 27) + '...' : resp.trim(),
-      category: 'responsibilities' as const,
-      color: TAG_CATEGORIES.responsibilities.color
-    }))
-}
-
-/**
  * Main function to extract all tags from a Supabase job record
  */
 export function extractTagsFromJob(job: SupabaseJob): Tag[] {
@@ -282,31 +193,6 @@ export function extractTagsFromJob(job: SupabaseJob): Tag[] {
     })
   }
   
-  // 4. Leadership Skills (extracted from description and management scope)
-  const leadershipFromDesc = extractKeywordsFromText(job.description || '', LEADERSHIP_SKILLS_MAP)
-    .map(skill => ({
-      label: LEADERSHIP_SKILLS_MAP[skill],
-      category: 'leadership' as const,
-      color: TAG_CATEGORIES.leadership.color
-    }))
-  
-  allTags.push(...leadershipFromDesc)
-  
-  // Add management scope as leadership tag if present
-  if (job.management_scope && job.management_scope !== 'Individual Contributor') {
-    allTags.push({
-      label: job.management_scope,
-      category: 'leadership',
-      color: TAG_CATEGORIES.leadership.color
-    })
-  }
-  
-  // 5. Product Methodology
-  allTags.push(...extractMethodologyTags(job.product_methodology))
-  
-  // 6. Key Responsibilities
-  allTags.push(...extractResponsibilityTags(job.primary_responsibilities))
-  
   // Remove duplicates based on label and category combination
   const uniqueTags = allTags.filter((tag, index, self) => 
     index === self.findIndex(t => t.label === tag.label && t.category === tag.category)
@@ -334,19 +220,13 @@ export function getAllUniqueTagsFromJobs(jobs: AppJob[]): {
   corePm: Tag[]
   technical: Tag[]
   domain: Tag[]
-  leadership: Tag[]
-  methodology: Tag[]
-  responsibilities: Tag[]
 } {
   const allTags = jobs.flatMap(job => job.tags)
   
   return {
     corePm: [...new Map(filterTagsByCategory(allTags, 'core-pm').map(tag => [tag.label, tag])).values()],
     technical: [...new Map(filterTagsByCategory(allTags, 'technical').map(tag => [tag.label, tag])).values()],
-    domain: [...new Map(filterTagsByCategory(allTags, 'domain').map(tag => [tag.label, tag])).values()],
-    leadership: [...new Map(filterTagsByCategory(allTags, 'leadership').map(tag => [tag.label, tag])).values()],
-    methodology: [...new Map(filterTagsByCategory(allTags, 'methodology').map(tag => [tag.label, tag])).values()],
-    responsibilities: [...new Map(filterTagsByCategory(allTags, 'responsibilities').map(tag => [tag.label, tag])).values()]
+    domain: [...new Map(filterTagsByCategory(allTags, 'domain').map(tag => [tag.label, tag])).values()]
   }
 }
 

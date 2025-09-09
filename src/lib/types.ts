@@ -3,7 +3,7 @@
 
 export interface Tag {
   label: string
-  category: 'core-pm' | 'technical' | 'domain' | 'leadership' | 'methodology' | 'responsibilities'
+  category: 'core-pm' | 'technical' | 'domain'
   color?: string
 }
 
