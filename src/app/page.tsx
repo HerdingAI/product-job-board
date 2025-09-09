@@ -145,6 +145,7 @@ export default function HomePage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
   const [pagination, setPagination] = useState({ page: 1, limit: 50, hasNextPage: false })
   const [totalLoaded, setTotalLoaded] = useState(0)
   const [canLoadMore, setCanLoadMore] = useState(true)
@@ -312,40 +313,24 @@ export default function HomePage() {
     updateUrl(filters)
   }, [filters, updateUrl])
 
-  // Debounced search effect with smart timing based on search length
-  useEffect(() => {
-    // Smart debounce timing based on search term length
-    const getDebounceDelay = (searchTerm: string) => {
-      const trimmed = searchTerm.trim()
-      if (trimmed.length === 0) return 0 // Clear immediately
-      if (trimmed.length <= 2) return 1200 // Longer delay for short terms
-      if (trimmed.length <= 4) return 800 // Medium delay for medium terms
-      return 600 // Shorter delay for longer, more specific terms
-    }
-
-    const delay = getDebounceDelay(searchInput)
-    
-    // Show pending state if there's a delay and search input differs from current filter
-    if (delay > 0 && searchInput !== filters.search) {
-      setIsSearchPending(true)
-    }
-
-    const timeoutId = setTimeout(() => {
-      setIsSearchPending(false)
-      handleFilterChange({ search: searchInput })
-    }, delay)
-
-    return () => {
-      clearTimeout(timeoutId)
-      if (delay === 0) setIsSearchPending(false)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput, filters.search]) // handleFilterChange is stable (useCallback with empty deps)
-
   // Sync searchInput with filters.search when filters change externally (e.g., URL change)
   useEffect(() => {
     setSearchInput(filters.search || '')
   }, [filters.search])
+
+  // Manual search handler for search button
+  const handleManualSearch = useCallback(async () => {
+    if (isSearching) return;
+    
+    // Reset to first page for new search
+    if (filters.currentPage !== 1) {
+      setFilters(prevFilters => ({ ...prevFilters, currentPage: 1 }));
+    }
+    
+    // Clear search pending state and trigger search
+    setIsSearchPending(false);
+    handleFilterChange({ search: searchInput });
+  }, [searchInput, isSearching, filters.currentPage, handleFilterChange]);
 
   // Focus search input after results update (for better UX during active searching)
   useEffect(() => {
@@ -453,6 +438,7 @@ export default function HomePage() {
   const fetchJobs = useCallback(async () => {
     const searchTimer = startTimer('search')
     setLoading(true)
+    setIsSearching(true)
     setError(null)
     
     try {
@@ -590,6 +576,7 @@ export default function HomePage() {
       updateJobCount(jobs.length)
       logMetrics()
       setLoading(false)
+      setIsSearching(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]) // startTimer, updateJobCount, logMetrics are stable (from usePerformance hook)
@@ -701,19 +688,16 @@ export default function HomePage() {
     }
   }, [filters, jobs, pagination, canLoadMore, loadingMore, totalLoaded, loadMoreWithRegularQuery])
 
+  // Initialize jobs on component mount and when filters change
   useEffect(() => {
     // Reset pagination and load more state when filters change
     setTotalLoaded(0)
     setCanLoadMore(true)
     setPagination({ page: 1, limit: 50, hasNextPage: false })
     
-    // Debounce the fetchJobs call to avoid excessive API calls during typing
-    const timeoutId = setTimeout(() => {
-      fetchJobs()
-    }, 300) // 300ms delay
-
-    return () => clearTimeout(timeoutId)
-  }, [fetchJobs])
+    // Only auto-fetch for filter changes, not for manual search
+    fetchJobs()
+  }, [filters])
 
   // Memoize the job list rendering for better performance
   const memoizedJobList = useMemo(() => (
@@ -799,44 +783,64 @@ export default function HomePage() {
 
         {/* Search Bar */}
         <div className="mb-6 sm:mb-8">
-          <div className="relative group">
-            <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 transition-colors group-focus-within:text-primary-500" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search jobs by title, company, or skills... (Press Enter for instant search)"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                // Allow users to press Escape to blur the search input
-                if (e.key === 'Escape') {
-                  searchInputRef.current?.blur()
-                }
-                // Allow users to press Enter for immediate search
-                if (e.key === 'Enter') {
-                  setIsSearchPending(false)
-                  handleFilterChange({ search: searchInput })
-                }
-              }}
-              className="input-modern w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 text-sm sm:text-base placeholder-gray-500 focus:placeholder-gray-400"
-            />
-            
-            {/* Search pending indicator */}
-            {isSearchPending && (
-              <div className="absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2">
-                <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            )}
-            
-            {searchInput.trim() && (
-              <button
-                onClick={() => setSearchInput('')}
-                className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
-                aria-label="Clear search"
-              >
-                <span className="text-base sm:text-lg">×</span>
-              </button>
-            )}
+          <div className="flex gap-3 flex-1">
+            <div className="relative group flex-1">
+              <Search className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 sm:h-5 sm:w-5 transition-colors group-focus-within:text-primary-500" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search jobs by title, company, or skills..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  // Allow users to press Escape to blur the search input
+                  if (e.key === 'Escape') {
+                    searchInputRef.current?.blur()
+                  }
+                  // Allow users to press Enter for immediate search
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleManualSearch()
+                  }
+                }}
+                className="input-modern w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 text-sm sm:text-base placeholder-gray-500 focus:placeholder-gray-400"
+              />
+              
+              {/* Search pending indicator */}
+              {isSearchPending && (
+                <div className="absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2">
+                  <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+              
+              {searchInput.trim() && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 h-5 w-5 sm:h-6 sm:w-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
+                  aria-label="Clear search"
+                >
+                  <span className="text-base sm:text-lg">×</span>
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleManualSearch}
+              disabled={isSearching}
+              className="btn-modern px-6 py-3 flex items-center gap-2 whitespace-nowrap"
+              aria-label="Search jobs"
+            >
+              {isSearching ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Search
+                </>
+              )}
+            </button>
           </div>
         </div>
 

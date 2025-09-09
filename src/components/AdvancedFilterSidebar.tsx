@@ -59,16 +59,19 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
     ? actualFilterValues.domainExpertise
     : []
 
+  const handleSalaryRangeSelect = (minSalary: number) => {
+    onFilterChange({ salaryMin: minSalary, salaryMax: undefined })
+  }
+
+  const clearSalaryFilter = () => {
+    onFilterChange({ salaryMin: undefined, salaryMax: undefined })
+  }
+
   const handleMultiSelectChange = (key: keyof FilterState, value: string, currentValues: string[] = []) => {
     const updated = currentValues.includes(value)
       ? currentValues.filter(v => v !== value)
       : [...currentValues, value]
     onFilterChange({ [key]: updated })
-  }
-
-  const handleSalaryChange = (type: 'min' | 'max', value: string) => {
-    const numValue = value ? parseInt(value) * 1000 : undefined // Convert K to actual value
-    onFilterChange({ [`salary${type.charAt(0).toUpperCase() + type.slice(1)}`]: numValue })
   }
 
   const handleTagToggle = (tag: Tag) => {
@@ -156,28 +159,44 @@ export function AdvancedFilterSidebar({ filters, onFilterChange, isOpen, onToggl
             {/* Salary Range */}
             <div>
               <h3 className="font-medium text-white mb-3">Salary Range (USD)</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Min (K)</label>
-                  <input
-                    type="number"
-                    placeholder="80"
-                    value={filters.salaryMin ? Math.floor(filters.salaryMin / 1000) : ''}
-                    onChange={(e) => handleSalaryChange('min', e.target.value)}
-                    className="input-modern w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Max (K)</label>
-                  <input
-                    type="number"
-                    placeholder="200"
-                    value={filters.salaryMax ? Math.floor(filters.salaryMax / 1000) : ''}
-                    onChange={(e) => handleSalaryChange('max', e.target.value)}
-                    className="input-modern w-full"
-                  />
-                </div>
+              
+              {/* Quick Salary Range Buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {[
+                  { label: '$80K+', value: 80000 },
+                  { label: '$100K+', value: 100000 },
+                  { label: '$125K+', value: 125000 },
+                  { label: '$150K+', value: 150000 },
+                  { label: '$175K+', value: 175000 }
+                ].map((range) => (
+                  <button
+                    key={range.value}
+                    onClick={() => handleSalaryRangeSelect(range.value)}
+                    className={`px-3 py-2 text-sm rounded-md border transition-all duration-200 ${
+                      filters.salaryMin === range.value
+                        ? 'bg-blue-600 border-blue-500 text-white'
+                        : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:border-gray-500'
+                    }`}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+                
+                {/* Clear button in the grid */}
+                <button
+                  onClick={clearSalaryFilter}
+                  className="px-3 py-2 text-sm rounded-md border bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700 hover:border-gray-500 hover:text-gray-300 transition-all duration-200"
+                >
+                  Clear
+                </button>
               </div>
+              
+              {/* Show current selection */}
+              {filters.salaryMin && (
+                <div className="text-sm text-blue-400 bg-blue-950/30 border border-blue-800/30 rounded-md px-3 py-2">
+                  Showing jobs: ${(filters.salaryMin / 1000).toFixed(0)}K+
+                </div>
+              )}
             </div>
 
             {/* Skills & Tags */}
