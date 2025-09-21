@@ -4,7 +4,7 @@ A curated, product-focused job board built with Next.js and Supabase. This fork 
 
 ## 🚀 Live Demo
 
-[Live Application URL] - (to be added)
+[product-careers.com]
 
 ## ✨ Features
 
