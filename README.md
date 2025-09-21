@@ -4,7 +4,7 @@ A curated, product-focused job board built with Next.js and Supabase. This fork 
 
 ## 🚀 Live Demo
 
-[product-careers.com]
+https://product-careers.com
 
 ## ✨ Features
 
@@ -253,10 +253,4 @@ The application is configured for easy deployment on Vercel:
 - **Performance**: Code splitting, image optimization, and Progressive Web App features
 - **Security**: Additional security headers, rate limiting, and input sanitization
 
-## 🤝 Contributing
 
-This is a take-home assignment project, but suggestions and feedback are welcome!
-
-## 📄 License
-
-This project is created as a technical assessment and is available for review and learning purposes.
