@@ -20,7 +20,8 @@ import {
   filterValidLocations,
   formatFilterValue,
   reverseFormatWorkArrangement,
-  reverseFormatFilterValue
+  reverseFormatFilterValue,
+  reverseFormatFilterValues
 } from '@/lib/filter-formatters'
 
 // Lazy load the AdvancedFilterSidebar for better performance
@@ -547,14 +548,14 @@ export default function HomePage() {
             .order('created_at', { ascending: false })
             .range((page - 1) * limit, page * limit - 1)
 
-          // REVERSE MAPPING: Convert display values back to database values
+          // REVERSE MAPPING: Convert display values back to database values (array-based for accuracy)
           if (filters.seniority && filters.seniority.trim()) {
-            const dbValue = reverseFormatFilterValue(filters.seniority, 'seniority')
-            q = q.ilike('seniority_level', dbValue)
+            const dbValues = reverseFormatFilterValues(filters.seniority, 'seniority')
+            q = q.in('seniority_level', dbValues)
           }
           if (filters.location && filters.location.trim()) {
-            const dbValue = reverseFormatFilterValue(filters.location, 'location')
-            q = q.ilike('location_metro', dbValue)
+            const dbValues = reverseFormatFilterValues(filters.location, 'location')
+            q = q.in('location_metro', dbValues)
           }
           if (filters.workArrangement && filters.workArrangement.trim()) {
             // Work arrangement maps to multiple possible DB values
@@ -597,14 +598,14 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(filters.resultsPerPage || 50)
 
-        // REVERSE MAPPING: Convert display values back to database values
+        // REVERSE MAPPING: Convert display values back to database values (array-based for accuracy)
         if (filters.seniority && filters.seniority.trim()) {
-          const dbValue = reverseFormatFilterValue(filters.seniority, 'seniority')
-          query = query.ilike('seniority_level', dbValue)
+          const dbValues = reverseFormatFilterValues(filters.seniority, 'seniority')
+          query = query.in('seniority_level', dbValues)
         }
         if (filters.location && filters.location.trim()) {
-          const dbValue = reverseFormatFilterValue(filters.location, 'location')
-          query = query.ilike('location_metro', dbValue)
+          const dbValues = reverseFormatFilterValues(filters.location, 'location')
+          query = query.in('location_metro', dbValues)
         }
         if (filters.workArrangement && filters.workArrangement.trim()) {
           // Work arrangement maps to multiple possible DB values
