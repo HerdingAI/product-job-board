@@ -18,6 +18,173 @@ interface JobSections {
 }
 
 /**
+ * Text-based content block (SSR-safe, no DOM dependencies)
+ */
+interface TextBlock {
+  type: 'header' | 'paragraph' | 'list';
+  content: string | string[];
+}
+
+/**
+ * Detects if a line is likely a section header based on patterns
+ * SSR-SAFE: No browser dependencies
+ */
+function isTextHeader(line: string): boolean {
+  const trimmed = line.trim();
+  if (trimmed.length < 3 || trimmed.length > 100) return false;
+
+  // Common header patterns
+  const headerPatterns = [
+    /^About (the )?(Team|Role|Position|Job|Company)/i,
+    /^(Your |Key |Main )?Responsibilities/i,
+    /^(What )?You'?[rll] (do|be doing|excited about)/i,
+    /^We'?re excited about you/i,
+    /^(What |Why )?We Offer/i,
+    /^Requirements?/i,
+    /^Qualifications?/i,
+    /^Benefits?/i,
+    /^Compensation/i,
+    /^Notice to Applicants/i,
+    /^Statement of/i,
+    /^Our (Team|Mission|Culture)/i,
+  ];
+
+  // Check if line matches header patterns
+  if (headerPatterns.some(pattern => pattern.test(trimmed))) {
+    return true;
+  }
+
+  // Check if line ends with ellipsis (common in headers like "You will…")
+  if (trimmed.endsWith('…') || trimmed.endsWith('...')) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Detects if lines form a bullet list
+ * SSR-SAFE: No browser dependencies
+ */
+function isTextList(lines: string[]): boolean {
+  if (lines.length < 2) return false;
+
+  const bulletPattern = /^[•\-\*\+▪◦▸▹●○]\s/;
+  const bulletCount = lines.filter(l => bulletPattern.test(l.trim())).length;
+
+  // If 60% or more lines have bullets, it's a list
+  return bulletCount >= lines.length * 0.6;
+}
+
+/**
+ * Parse plain text into structured blocks
+ * SSR-SAFE: No browser dependencies, works with formatless text
+ */
+function parseTextToBlocks(text: string): TextBlock[] {
+  if (!text) return [];
+
+  const blocks: TextBlock[] = [];
+
+  // Split by double newlines to get potential paragraphs
+  const chunks = text.split(/\n\n+/).map(chunk => chunk.trim()).filter(Boolean);
+
+  for (const chunk of chunks) {
+    const lines = chunk.split('\n').map(l => l.trim()).filter(Boolean);
+
+    if (lines.length === 0) continue;
+
+    // Check if this chunk is a header
+    if (lines.length === 1 && isTextHeader(lines[0])) {
+      blocks.push({
+        type: 'header',
+        content: lines[0]
+      });
+      continue;
+    }
+
+    // Check if this chunk is a list
+    if (isTextList(lines)) {
+      const bulletPattern = /^[•\-\*\+▪◦▸▹●○]\s*/;
+      const items = lines.map(line => line.replace(bulletPattern, '').trim());
+      blocks.push({
+        type: 'list',
+        content: items
+      });
+      continue;
+    }
+
+    // Check if first line is a header followed by content
+    if (lines.length > 1 && isTextHeader(lines[0])) {
+      blocks.push({
+        type: 'header',
+        content: lines[0]
+      });
+
+      // Add remaining lines as paragraph or list
+      const remainingLines = lines.slice(1);
+      if (isTextList(remainingLines)) {
+        const bulletPattern = /^[•\-\*\+▪◦▸▹●○]\s*/;
+        const items = remainingLines.map(line => line.replace(bulletPattern, '').trim());
+        blocks.push({
+          type: 'list',
+          content: items
+        });
+      } else {
+        blocks.push({
+          type: 'paragraph',
+          content: remainingLines.join(' ')
+        });
+      }
+      continue;
+    }
+
+    // Otherwise, treat as paragraph
+    blocks.push({
+      type: 'paragraph',
+      content: lines.join(' ')
+    });
+  }
+
+  return blocks;
+}
+
+/**
+ * Strip basic HTML tags from text (SSR-safe)
+ */
+function stripHtmlTags(html: string): string {
+  if (!html) return '';
+
+  // Remove script, style, and comment tags
+  let text = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+
+  // Replace common HTML entities
+  text = text
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&rsquo;/gi, "'")
+    .replace(/&lsquo;/gi, "'")
+    .replace(/&rdquo;/gi, '"')
+    .replace(/&ldquo;/gi, '"');
+
+  // Remove all remaining HTML tags
+  text = text.replace(/<[^>]+>/g, ' ');
+
+  // Clean up whitespace
+  text = text
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return text;
+}
+
+/**
  * Parses raw HTML job descriptions into clean, structured content
  * Handles various HTML structures from different job boards
  */
@@ -30,50 +197,36 @@ export function parseJobDescription(rawHtml: string): ParsedJobContent {
     };
   }
 
-  // Remove script tags, style tags, and other unwanted elements
-  const cleanHtml = rawHtml
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '');
+  // Strip HTML tags to get plain text (SSR-safe)
+  const plainText = stripHtmlTags(rawHtml);
 
-  // Parse DOM structure
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(cleanHtml, 'text/html');
-  
+  // Parse text into structured blocks
+  const blocks = parseTextToBlocks(plainText);
+
+  // Convert blocks to sections format
   const sections: ParsedJobContent['sections'] = [];
-  let hasStructure = false;
+  let hasStructure = blocks.some(b => b.type === 'header');
 
-  // Extract headers and their content
-  const headers = doc.querySelectorAll('h1, h2, h3, h4, h5, h6');
-  
-  if (headers.length > 0) {
-    hasStructure = true;
-    
-    headers.forEach((header, index) => {
-      const headerText = cleanText(header.textContent || '');
-      if (!headerText) return;
-
-      // Get content between this header and the next one
-      const content = getContentBetweenHeaders(header, headers[index + 1]);
-      
+  for (const block of blocks) {
+    if (block.type === 'header') {
       sections.push({
-        title: headerText,
-        content: content.text,
-        type: content.hasLists ? 'list' : 'text'
+        title: block.content as string,
+        content: '',
+        type: 'header'
       });
-    });
-  }
-
-  // If no clear structure, treat as single content block
-  if (!hasStructure) {
-    const bodyContent = extractTextContent(doc.body || doc);
-    
-    sections.push({
-      title: '',
-      content: bodyContent,
-      type: 'text'
-    });
+    } else if (block.type === 'list') {
+      sections.push({
+        title: '',
+        content: (block.content as string[]).map(item => `• ${item}`).join('\n'),
+        type: 'list'
+      });
+    } else {
+      sections.push({
+        title: '',
+        content: block.content as string,
+        type: 'text'
+      });
+    }
   }
 
   // Generate clean text version
