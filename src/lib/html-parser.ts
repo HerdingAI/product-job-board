@@ -1,24 +1,3 @@
-/**
- * Content block types for structured parsing
- */
-export type BlockType = 'header' | 'paragraph' | 'list' | 'empty_line'
-
-export interface ContentBlock {
-  type: BlockType
-  content: string | string[] // string for text, array for lists
-  level?: number // for headers (1-3)
-  metadata?: {
-    isStrong?: boolean // was this bold in original?
-    listStyle?: 'bullet' | 'number'
-    originalTag?: string // original HTML tag
-  }
-}
-
-export interface NormalizedContent {
-  blocks: ContentBlock[]
-  rawBlocks: ContentBlock[] // before section organization
-}
-
 interface ParsedJobContent {
   cleanText: string;
   sections: {
@@ -27,8 +6,6 @@ interface ParsedJobContent {
     type: 'text' | 'list' | 'header';
   }[];
   hasStructure: boolean;
-  // NEW: Add block-based representation
-  normalized?: NormalizedContent;
 }
 
 interface JobSections {
@@ -38,99 +15,6 @@ interface JobSections {
   benefits?: string[];
   about?: string;
   other: string;
-}
-
-/**
- * Extracts content as structured blocks instead of flattened text
- */
-export function extractContentBlocks(element: Element | Document): ContentBlock[] {
-  const blocks: ContentBlock[] = []
-
-  const processElement = (el: Element): void => {
-    const tagName = el.tagName.toLowerCase()
-
-    // Headers
-    if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-      const level = parseInt(tagName[1])
-      const text = cleanText(el.textContent || '')
-      if (text) {
-        blocks.push({
-          type: 'header',
-          content: text,
-          level: Math.min(level, 3), // Cap at level 3 for consistency
-          metadata: { originalTag: tagName }
-        })
-      }
-      return
-    }
-
-    // Lists
-    if (tagName === 'ul' || tagName === 'ol') {
-      const items = Array.from(el.querySelectorAll('li'))
-        .map(li => cleanText(li.textContent || ''))
-        .filter(item => item.length > 0)
-
-      if (items.length > 0) {
-        blocks.push({
-          type: 'list',
-          content: items,
-          metadata: {
-            listStyle: tagName === 'ol' ? 'number' : 'bullet',
-            originalTag: tagName
-          }
-        })
-      }
-      return
-    }
-
-    // Paragraphs and divs
-    if (tagName === 'p' || tagName === 'div') {
-      // Check if this contains a bold header
-      const strong = el.querySelector('strong, b')
-      const text = cleanText(el.textContent || '')
-
-      if (text) {
-        // Check if entire content is bold (likely a header)
-        if (strong && cleanText(strong.textContent || '') === text && text.length < 100) {
-          blocks.push({
-            type: 'header',
-            content: text,
-            level: 2,
-            metadata: { isStrong: true, originalTag: tagName }
-          })
-        } else {
-          blocks.push({
-            type: 'paragraph',
-            content: text,
-            metadata: { originalTag: tagName }
-          })
-        }
-      }
-      return
-    }
-
-    // Line breaks
-    if (tagName === 'br') {
-      // Add empty line block
-      blocks.push({ type: 'empty_line', content: '' })
-      return
-    }
-
-    // For other elements, process children recursively
-    Array.from(el.children).forEach(processElement)
-  }
-
-  // Start processing
-  if (element.nodeType === Node.DOCUMENT_NODE) {
-    const doc = element as Document
-    if (doc.body) {
-      Array.from(doc.body.children).forEach(processElement)
-    }
-  } else {
-    Array.from(element.children).forEach(processElement)
-  }
-
-  return blocks
 }
 
 /**
@@ -198,45 +82,10 @@ export function parseJobDescription(rawHtml: string): ParsedJobContent {
     .join('\n\n')
     .trim();
 
-  // NEW: Extract block-based representation
-  const blocks = extractContentBlocks(doc)
-
-  // Post-process blocks to detect lists in paragraphs
-  const processedBlocks: ContentBlock[] = []
-  for (const block of blocks) {
-    if (block.type === 'paragraph') {
-      const listCheck = detectTextList(block.content as string)
-      if (listCheck.isList) {
-        // Convert paragraph to list
-        processedBlocks.push({
-          type: 'list',
-          content: listCheck.items,
-          metadata: { listStyle: 'bullet' }
-        })
-      } else if (isLikelyHeader(block.content as string)) {
-        // Convert paragraph to header
-        processedBlocks.push({
-          type: 'header',
-          content: block.content,
-          level: 2,
-          metadata: { ...block.metadata }
-        })
-      } else {
-        processedBlocks.push(block)
-      }
-    } else {
-      processedBlocks.push(block)
-    }
-  }
-
   return {
     cleanText: cleanTextContent,
     sections,
-    hasStructure,
-    normalized: {
-      blocks: processedBlocks,
-      rawBlocks: blocks
-    }
+    hasStructure
   };
 }
 
@@ -470,80 +319,6 @@ function parseListContent(content: string): string[] {
     .filter(item => item.length > 0 && item !== '•');
 
   return items.length > 0 ? items : [content];
-}
-
-/**
- * Determines if text is likely a header
- */
-function isLikelyHeader(text: string): boolean {
-  const trimmed = text.trim()
-
-  // Too long to be a header
-  if (trimmed.length > 100) return false
-
-  // Too short to be meaningful
-  if (trimmed.length < 3) return false
-
-  // Ends with colon (common header pattern)
-  if (trimmed.endsWith(':')) return true
-
-  // ALL CAPS (minimum 4 characters to avoid false positives)
-  if (trimmed.length >= 4 && trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed)) {
-    return true
-  }
-
-  // Common section keywords
-  const headerKeywords = [
-    /^about( the)?( role| position| job)?$/i,
-    /^responsibilities$/i,
-    /^requirements$/i,
-    /^qualifications$/i,
-    /^benefits$/i,
-    /^what (you'll do|we offer|you bring)$/i,
-    /^(key|your) responsibilities$/i,
-    /^(our|the) team$/i,
-    /^overview$/i,
-  ]
-
-  return headerKeywords.some(pattern => pattern.test(trimmed))
-}
-
-/**
- * Detects if text content is a list based on bullet patterns
- */
-function detectTextList(text: string): { isList: boolean; items: string[] } {
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-
-  if (lines.length < 2) {
-    return { isList: false, items: [] }
-  }
-
-  // Common bullet markers
-  const bulletPattern = /^[•\-\*\+▪◦▸▹●○]\s+(.+)$/
-  const bulletLines = lines.filter(l => bulletPattern.test(l))
-
-  // If majority of lines have bullets, it's a list
-  if (bulletLines.length >= lines.length * 0.6) {
-    const items = lines.map(l => {
-      const match = l.match(bulletPattern)
-      return match ? match[1].trim() : l
-    })
-    return { isList: true, items }
-  }
-
-  // Check for numbered lists
-  const numberPattern = /^\d+[\.)]\s+(.+)$/
-  const numberedLines = lines.filter(l => numberPattern.test(l))
-
-  if (numberedLines.length >= lines.length * 0.6) {
-    const items = lines.map(l => {
-      const match = l.match(numberPattern)
-      return match ? match[1].trim() : l
-    })
-    return { isList: true, items }
-  }
-
-  return { isList: false, items: [] }
 }
 
 /**
