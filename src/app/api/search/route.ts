@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { reverseFormatWorkArrangement, reverseFormatFilterValue } from '@/lib/filter-formatters'
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,9 +17,23 @@ export async function GET(request: NextRequest) {
     const single = ['seniority', 'location', 'workArrangement', 'salaryMin', 'salaryMax']
     const multi = ['companyStage', 'productLifecycle', 'productDomain', 'managementScope', 'industryVertical', 'experienceBucket', 'domainExpertise']
 
+    // REVERSE MAPPING: Convert formatted display values back to database values
     for (const key of single) {
       const v = searchParams.get(key)
-      if (v) filters[key] = key.includes('salary') ? parseInt(v) : v
+      if (v) {
+        if (key.includes('salary')) {
+          filters[key] = parseInt(v)
+        } else if (key === 'seniority') {
+          filters[key] = reverseFormatFilterValue(v, 'seniority')
+        } else if (key === 'location') {
+          filters[key] = reverseFormatFilterValue(v, 'location')
+        } else if (key === 'workArrangement') {
+          // Work arrangement maps to array of possible DB values
+          filters[key] = reverseFormatWorkArrangement(v)
+        } else {
+          filters[key] = v
+        }
+      }
     }
     for (const key of multi) {
       const v = searchParams.get(key)

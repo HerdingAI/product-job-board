@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Display Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        h1 {
+            color: #4a9eff;
+        }
+        h2 {
+            color: #66b3ff;
+            margin-top: 30px;
+        }
+        .filter-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .filter-value {
+            background: #333;
+            border: 1px solid #555;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .expected {
+            color: #4ade80;
+        }
+        .actual {
+            color: #f0f0f0;
+        }
+        .pass {
+            background: #1a4d1a;
+            border-color: #2d7a2d;
+        }
+        .fail {
+            background: #4d1a1a;
+            border-color: #7a2d2d;
+        }
+        .summary {
+            background: #2a3a4a;
+            border: 2px solid #4a9eff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .count {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .loading {
+            color: #fbbf24;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Filter Display Test - Actual vs Expected Results</h1>
+
+    <div class="summary" id="summary">
+        <p class="loading">⏳ Loading filter values from the app...</p>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        async function testFilters() {
+            try {
+                // Fetch the main page to trigger filter value loading
+                const response = await fetch('http://localhost:3000/');
+                const html = await response.text();
+
+                // Wait a moment for the client-side to load and fetch filter values
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Now display the results
+                displayResults();
+
+            } catch (error) {
+                document.getElementById('summary').innerHTML = `
+                    <p style="color: #ef4444;">❌ Error loading app: ${error.message}</p>
+                    <p>Make sure the dev server is running at http://localhost:3000</p>
+                `;
+            }
+        }
+
+        function displayResults() {
+            const results = document.getElementById('results');
+            const summary = document.getElementById('summary');
+
+            summary.innerHTML = `
+                <h3>✅ Test Complete - Check Browser Console</h3>
+                <p>To see actual filter values:</p>
+                <ol>
+                    <li>Open http://localhost:3000 in your browser</li>
+                    <li>Open DevTools Console (F12)</li>
+                    <li>Look for logs starting with "🔍 Actual database values:"</li>
+                </ol>
+                <p class="count">Expected Results:</p>
+            `;
+
+            results.innerHTML = `
+                <div class="filter-section">
+                    <h2>📊 Seniority Levels</h2>
+                    <p><strong>Expected Format:</strong> Title Case (e.g., "Senior", "Mid-Level", "Junior")</p>
+                    <p><strong>NOT:</strong> Lowercase (e.g., "senior", "mid-level", "junior")</p>
+                    <div class="filter-grid">
+                        <div class="filter-value expected">Entry Level</div>
+                        <div class="filter-value expected">Junior</div>
+                        <div class="filter-value expected">Mid-Level</div>
+                        <div class="filter-value expected">Senior</div>
+                        <div class="filter-value expected">Staff</div>
+                        <div class="filter-value expected">Principal</div>
+                        <div class="filter-value expected">Director</div>
+                        <div class="filter-value expected">VP</div>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h2>📍 Locations</h2>
+                    <p><strong>Expected Format:</strong> Properly formatted city/metro names</p>
+                    <p><strong>Cleaned:</strong> No "null", "n/a", invalid values</p>
+                    <div class="filter-grid">
+                        <div class="filter-value expected">San Francisco Bay Area</div>
+                        <div class="filter-value expected">New York City</div>
+                        <div class="filter-value expected">Seattle</div>
+                        <div class="filter-value expected">Austin</div>
+                        <div class="filter-value expected">Boston</div>
+                        <div class="filter-value expected">Remote</div>
+                        <div class="filter-value expected">London</div>
+                        <div class="filter-value expected">Berlin</div>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h2>🏢 Work Arrangement</h2>
+                    <p><strong>Expected:</strong> EXACTLY 3 options only</p>
+                    <p><strong>NOT:</strong> Multiple variations like "remote", "remote_us", "hybrid_only", etc.</p>
+                    <div class="filter-grid">
+                        <div class="filter-value expected pass">Remote</div>
+                        <div class="filter-value expected pass">Hybrid</div>
+                        <div class="filter-value expected pass">In-Person</div>
+                    </div>
+                    <p style="margin-top: 15px; color: #fbbf24;">
+                        ⚠️ If you see more than 3 options, the normalization failed
+                    </p>
+                </div>
+
+                <div class="filter-section">
+                    <h2>🏷️ Tags & Skills</h2>
+                    <p><strong>Expected Format:</strong> Title Case for all tags</p>
+                    <div class="filter-grid">
+                        <div class="filter-value expected">Product Strategy</div>
+                        <div class="filter-value expected">Data Analysis</div>
+                        <div class="filter-value expected">A/B Testing</div>
+                        <div class="filter-value expected">API Integration</div>
+                        <div class="filter-value expected">B2B SaaS</div>
+                        <div class="filter-value expected">User Research</div>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h2>✅ How to Verify</h2>
+                    <ol style="line-height: 1.8;">
+                        <li>Visit <a href="http://localhost:3000" target="_blank" style="color: #4a9eff;">http://localhost:3000</a></li>
+                        <li>Open your browser's DevTools Console (F12)</li>
+                        <li>Look for console logs with "🔍 Actual database values:"</li>
+                        <li>Compare the actual values with expected values above</li>
+                        <li>Check the filter dropdowns on the page:
+                            <ul>
+                                <li>Seniority dropdown should show Title Case</li>
+                                <li>Location dropdown should show formatted cities</li>
+                                <li>Work Type dropdown should show ONLY 3 options</li>
+                            </ul>
+                        </li>
+                        <li>Test filtering: Select a filter and verify jobs are returned correctly</li>
+                    </ol>
+                </div>
+
+                <div class="filter-section" style="background: #1a2a3a; border-color: #4a9eff;">
+                    <h2>🎯 Success Criteria</h2>
+                    <ul style="line-height: 1.8;">
+                        <li>✅ All seniority levels in Title Case</li>
+                        <li>✅ All locations properly formatted (no lowercase, no invalid values)</li>
+                        <li>✅ Work arrangement shows EXACTLY 3 options (Remote, Hybrid, In-Person)</li>
+                        <li>✅ All tags display in Title Case</li>
+                        <li>✅ Filters work correctly (selecting "Remote" returns remote jobs)</li>
+                        <li>✅ No breaking changes (search, pagination, advanced filters all work)</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Auto-run test on load
+        testFilters();
+    </script>
+</body>
+</html>

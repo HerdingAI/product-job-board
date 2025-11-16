@@ -13,6 +13,15 @@ import { extractCleanTextPreview } from '@/lib/html-parser'
 import type { SupabaseJob } from '@/lib/supabase'
 import { tagToUrlParam, tagFromUrlParam } from '@/lib/tag-parser'
 import { usePerformance } from '@/hooks/usePerformance'
+import {
+  formatSeniorityLevel,
+  formatLocation,
+  normalizeWorkArrangement,
+  filterValidLocations,
+  formatFilterValue,
+  reverseFormatWorkArrangement,
+  reverseFormatFilterValue
+} from '@/lib/filter-formatters'
 
 // Lazy load the AdvancedFilterSidebar for better performance
 const AdvancedFilterSidebar = lazy(() => 
@@ -386,19 +395,74 @@ export default function HomePage() {
       console.log('✅ Filter query successful. Got', allJobs?.length, 'jobs for filter extraction')
       
       if (allJobs) {
-        // Extract unique values and filter out nulls/empty strings
-        const seniority = [...new Set(allJobs.map(j => j.seniority_level).filter(Boolean))].sort()
-        const location = [...new Set([
-          ...allJobs.map(j => j.location_metro).filter(Boolean)
-        ])].sort()
-        const workArrangement = [...new Set(allJobs.map(j => j.work_arrangement).filter(Boolean))].sort()
-        const companyStage = [...new Set(allJobs.map(j => j.company_stage).filter(Boolean))].sort()
-        const productLifecycle = [...new Set(allJobs.map(j => j.product_lifecycle_focus).filter(Boolean))].sort()
-        const productDomain = [...new Set(allJobs.map(j => j.product_domain).filter(Boolean))].sort()
-        const managementScope = [...new Set(allJobs.map(j => j.management_scope).filter(Boolean))].sort()
-        const industryVertical = [...new Set(allJobs.map(j => j.industry_vertical).filter(Boolean))].sort()
-        const experienceBucket = [...new Set(allJobs.map(j => j.experience_bucket).filter(Boolean))].sort()
-        const domainExpertise = [...new Set(allJobs.map(j => j.domain_expertise).filter(Boolean))].sort()
+        // Extract and FORMAT unique values with proper display formatting
+
+        // Seniority: Format to Title Case
+        const seniorityRaw = [...new Set(allJobs.map(j => j.seniority_level).filter(Boolean))]
+        const seniority = [...new Set(
+          seniorityRaw
+            .map(level => formatSeniorityLevel(level))
+            .filter(Boolean)
+        )].sort()
+
+        // Location: Validate and format
+        const locationRaw = [...new Set(allJobs.map(j => j.location_metro).filter(Boolean))]
+        const location = [...new Set(
+          filterValidLocations(locationRaw)
+            .map(loc => formatLocation(loc))
+            .filter(Boolean)
+        )].sort()
+
+        // Work Arrangement: Normalize to exactly 3 options
+        const workArrangementRaw = [...new Set(allJobs.map(j => j.work_arrangement).filter(Boolean))]
+        const workArrangement = [...new Set(
+          workArrangementRaw
+            .map(arr => normalizeWorkArrangement(arr))
+            .filter(Boolean) as string[]
+        )].sort()
+
+        // Other filters: Format using generic formatter
+        const companyStage = [...new Set(
+          allJobs.map(j => j.company_stage)
+            .filter(Boolean)
+            .map(stage => formatFilterValue(stage, 'companyStage'))
+        )].sort()
+
+        const productLifecycle = [...new Set(
+          allJobs.map(j => j.product_lifecycle_focus)
+            .filter(Boolean)
+            .map(pl => formatFilterValue(pl, 'productLifecycle'))
+        )].sort()
+
+        const productDomain = [...new Set(
+          allJobs.map(j => j.product_domain)
+            .filter(Boolean)
+            .map(pd => formatFilterValue(pd, 'productDomain'))
+        )].sort()
+
+        const managementScope = [...new Set(
+          allJobs.map(j => j.management_scope)
+            .filter(Boolean)
+            .map(ms => formatFilterValue(ms, 'managementScope'))
+        )].sort()
+
+        const industryVertical = [...new Set(
+          allJobs.map(j => j.industry_vertical)
+            .filter(Boolean)
+            .map(iv => formatFilterValue(iv, 'industryVertical'))
+        )].sort()
+
+        const experienceBucket = [...new Set(
+          allJobs.map(j => j.experience_bucket)
+            .filter(Boolean)
+            .map(eb => formatFilterValue(eb, 'experienceBucket'))
+        )].sort()
+
+        const domainExpertise = [...new Set(
+          allJobs.map(j => j.domain_expertise)
+            .filter(Boolean)
+            .map(de => formatFilterValue(de, 'domainExpertise'))
+        )].sort()
         
         console.log('🔍 Actual database values:')
         console.log('  Seniority:', seniority)
@@ -483,14 +547,19 @@ export default function HomePage() {
             .order('created_at', { ascending: false })
             .range((page - 1) * limit, page * limit - 1)
 
+          // REVERSE MAPPING: Convert display values back to database values
           if (filters.seniority && filters.seniority.trim()) {
-            q = q.eq('seniority_level', filters.seniority)
+            const dbValue = reverseFormatFilterValue(filters.seniority, 'seniority')
+            q = q.ilike('seniority_level', dbValue)
           }
           if (filters.location && filters.location.trim()) {
-            q = q.eq('location_metro', filters.location)
+            const dbValue = reverseFormatFilterValue(filters.location, 'location')
+            q = q.ilike('location_metro', dbValue)
           }
           if (filters.workArrangement && filters.workArrangement.trim()) {
-            q = q.eq('work_arrangement', filters.workArrangement)
+            // Work arrangement maps to multiple possible DB values
+            const dbValues = reverseFormatWorkArrangement(filters.workArrangement)
+            q = q.in('work_arrangement', dbValues)
           }
           if (filters.companyStage?.length) q = q.in('company_stage', filters.companyStage)
           if (filters.productLifecycle?.length) q = q.in('product_lifecycle_focus', filters.productLifecycle)
@@ -528,14 +597,19 @@ export default function HomePage() {
           .order('created_at', { ascending: false })
           .limit(filters.resultsPerPage || 50)
 
+        // REVERSE MAPPING: Convert display values back to database values
         if (filters.seniority && filters.seniority.trim()) {
-          query = query.eq('seniority_level', filters.seniority)
+          const dbValue = reverseFormatFilterValue(filters.seniority, 'seniority')
+          query = query.ilike('seniority_level', dbValue)
         }
         if (filters.location && filters.location.trim()) {
-          query = query.eq('location_metro', filters.location)
+          const dbValue = reverseFormatFilterValue(filters.location, 'location')
+          query = query.ilike('location_metro', dbValue)
         }
         if (filters.workArrangement && filters.workArrangement.trim()) {
-          query = query.eq('work_arrangement', filters.workArrangement)
+          // Work arrangement maps to multiple possible DB values
+          const dbValues = reverseFormatWorkArrangement(filters.workArrangement)
+          query = query.in('work_arrangement', dbValues)
         }
         if (filters.companyStage?.length) query = query.in('company_stage', filters.companyStage)
         if (filters.productLifecycle?.length) query = query.in('product_lifecycle_focus', filters.productLifecycle)

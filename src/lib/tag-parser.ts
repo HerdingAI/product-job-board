@@ -105,22 +105,22 @@ const DOMAIN_EXPERTISE_MAP: Record<string, string> = {
  * Parse comma-separated or array fields into structured tags
  */
 function parseCommaSeparated(
-  field: string | string[] | null | undefined, 
+  field: string | string[] | null | undefined,
   category: keyof typeof TAG_CATEGORIES,
   skillMap?: Record<string, string>
 ): Tag[] {
   if (!field) return []
-  
+
   const values = Array.isArray(field) ? field : field.split(',')
-  
+
   return values
     .map(value => value.trim().toLowerCase())
     .filter(value => value.length > 0)
     .map(value => {
-      const label = skillMap?.[value] || value.split(' ').map(word => 
-        word.charAt(0).toUpperCase() + word.slice(1)
-      ).join(' ')
-      
+      // Use formatCamelCase from text-formatter for consistent formatting
+      const { formatCamelCase } = require('./text-formatter')
+      const label = skillMap?.[value] || formatCamelCase(value)
+
       return {
         label,
         category,
