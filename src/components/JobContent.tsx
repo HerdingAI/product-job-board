@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { parseJobDescription, extractJobSections } from '@/lib/html-parser';
+import { parseJobDescription, extractJobSections, type ContentBlock } from '@/lib/html-parser';
 
 interface JobContentProps {
   rawHtml: string;
@@ -98,6 +98,65 @@ export function JobContent({ rawHtml, className = '' }: JobContentProps) {
       return part;
     });
   };
+
+  // Function to render individual blocks
+  const renderBlock = (block: ContentBlock, index: number) => {
+    switch (block.type) {
+      case 'header':
+        const HeadingTag = block.level === 1 ? 'h2' : 'h3'
+        return (
+          <HeadingTag
+            key={index}
+            className="text-base sm:text-lg font-semibold text-white mt-4 sm:mt-6 mb-2 sm:mb-3"
+          >
+            {block.content}
+          </HeadingTag>
+        )
+
+      case 'paragraph':
+        return (
+          <p
+            key={index}
+            className="text-gray-300 leading-relaxed mb-3 sm:mb-4 text-sm sm:text-base"
+          >
+            {renderInlineFormatting(block.content as string)}
+          </p>
+        )
+
+      case 'list':
+        return (
+          <div key={index} className="space-y-2 mb-4">
+            {(block.content as string[]).map((item, i) => (
+              <div key={i} className="flex items-start">
+                <span className="text-blue-400 mr-2 mt-1 flex-shrink-0">•</span>
+                <span className="text-gray-300 leading-relaxed text-sm sm:text-base">
+                  {renderInlineFormatting(item)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'empty_line':
+        return <div key={index} className="h-2" />
+
+      default:
+        return null
+    }
+  }
+
+  // NEW: If we have block-based content, use it
+  if (parsedContent.normalized?.blocks && parsedContent.normalized.blocks.length > 0) {
+    return (
+      <div className={`max-w-none ${className}`}>
+        <div className="text-gray-300 text-sm sm:text-base">
+          {parsedContent.normalized.blocks.map((block, index) =>
+            renderBlock(block, index)
+          )}
+        </div>
+      </div>
+    )
+  }
 
   // If we have structured sections, render them organized
   if (parsedContent.hasStructure && (sections.about || sections.responsibilities?.length || sections.requirements?.length)) {
