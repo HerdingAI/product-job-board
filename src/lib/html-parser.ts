@@ -221,13 +221,20 @@ function extractTextContent(element: Element | Document): string {
 
       // Handle different HTML elements
       if (tagName === 'p' || tagName === 'div') {
-        // Add paragraph breaks
-        if (result.length > 0 && result[result.length - 1] !== '\n\n') {
-          result.push('\n\n');
+        // Add paragraph break before (if needed)
+        if (result.length > 0) {
+          const lastItem = result[result.length - 1];
+          if (lastItem !== '\n\n' && lastItem !== '\n') {
+            result.push('\n\n');
+          }
         }
         // Process children
         Array.from(element.childNodes).forEach(processNode);
-        result.push('\n\n');
+        // Add paragraph break after (if content was added)
+        const lastItem = result[result.length - 1];
+        if (lastItem && lastItem !== '\n\n' && lastItem !== '\n') {
+          result.push('\n\n');
+        }
       } else if (tagName === 'br') {
         result.push('\n');
       } else if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
@@ -285,12 +292,14 @@ function extractTextContent(element: Element | Document): string {
 
   // Join and clean up the result
   let text = result.join('');
-  
-  // Clean up extra whitespace and newlines
+
+  // Clean up whitespace while preserving structure
   text = text
-    .replace(/\n{3,}/g, '\n\n') // Reduce multiple newlines to double
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines (paragraph breaks)
     .replace(/^\s+|\s+$/g, '') // Trim start and end
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .split('\n') // Split into lines
+    .map(line => line.replace(/\s+/g, ' ').trim()) // Clean whitespace WITHIN lines only
+    .join('\n') // Rejoin with newlines preserved
     .replace(/\n\s+/g, '\n') // Remove spaces after newlines
     .replace(/\s+\n/g, '\n'); // Remove spaces before newlines
 
@@ -313,14 +322,18 @@ function parseListContent(content: string): string[] {
 }
 
 /**
- * Cleans text content by removing extra whitespace and formatting
+ * Cleans text content by removing extra whitespace while preserving paragraph breaks
  */
 function cleanText(text: string): string {
   if (!text) return '';
 
+  // Split into lines, clean each line, then rejoin
+  // This preserves intentional line breaks while cleaning whitespace
   return text
-    .replace(/\s+/g, ' ') // Replace multiple whitespace with single space
-    .replace(/\n\s*\n/g, '\n') // Remove empty lines
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').trim()) // Clean whitespace within each line
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
     .trim();
 }
 
