@@ -83,13 +83,18 @@ function isTextList(lines: string[]): boolean {
 function injectHeaderBreaks(text: string): string {
   if (!text) return '';
 
-  // Comprehensive header patterns that match the actual data
+  // Specific header patterns - only match at sentence/text boundaries
   const headerPatterns = [
     'About the Team',
     'About the Role',
     'About the Position',
     'About the Job',
     'About the Company',
+    'About DoorDash',
+    'About Uber',
+    'About Google',
+    'About Amazon',
+    'About Meta',
     'You\'re excited about this opportunity because you will',
     'You\'re excited about this role because you will',
     'We\'re excited about you because',
@@ -106,20 +111,30 @@ function injectHeaderBreaks(text: string): string {
     'Compensation',
     'Notice to Applicants',
     'Statement of Non-Discrimination',
-    'Our Commitment to',
-    'About DoorDash',
-    'About ' // Generic "About X" pattern
+    'Our Commitment to Diversity',
+    'Our Commitment to'
   ];
 
   let result = text;
 
-  // For each pattern, insert breaks before it
-  headerPatterns.forEach(pattern => {
-    // Create regex that matches the pattern (case insensitive)
-    const regex = new RegExp(`(${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  // Sort by length (longest first) to match more specific patterns first
+  const sortedPatterns = [...headerPatterns].sort((a, b) => b.length - a.length);
 
-    // Replace with double newline before + the match
-    result = result.replace(regex, '\n\n$1');
+  // For each pattern, insert breaks before it (at sentence boundaries only)
+  sortedPatterns.forEach(pattern => {
+    // Escape special regex characters
+    const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Match pattern only at:
+    // - Start of text (^)
+    // - After sentence-ending punctuation (. ! ?) followed by space
+    // This prevents matching "about" in middle of sentences like "passionate about"
+    const regex = new RegExp(`(^|(?<=[.!?])\\s+)(${escapedPattern})`, 'gi');
+
+    // Replace, keeping any preceding content
+    result = result.replace(regex, (match, prefix, headerText) => {
+      return prefix + '\n\n' + headerText;
+    });
   });
 
   // Clean up multiple consecutive breaks
@@ -173,14 +188,37 @@ function parseTextToBlocks(text: string): TextBlock[] {
 
     // Check if first line is a header followed by content
     if (lines.length > 1 && isTextHeader(lines[0])) {
+      const headerText = lines[0];
       blocks.push({
         type: 'header',
-        content: lines[0]
+        content: headerText
       });
 
       // Add remaining lines as paragraph or list
       const remainingLines = lines.slice(1);
-      if (isTextList(remainingLines)) {
+
+      // If header ends with "…" or ":", treat following content as list items
+      // Split by sentence boundaries to create list items
+      if (headerText.endsWith('…') || headerText.endsWith(':')) {
+        const remainingText = remainingLines.join(' ');
+        // Split by sentence-ending punctuation + space + capital letter
+        const sentences = remainingText.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(s => s.trim().length > 0);
+
+        if (sentences.length > 1) {
+          // Multiple sentences = list items
+          blocks.push({
+            type: 'list',
+            content: sentences.map(s => s.trim())
+          });
+        } else {
+          // Single sentence = paragraph
+          blocks.push({
+            type: 'paragraph',
+            content: remainingText
+          });
+        }
+      } else if (isTextList(remainingLines)) {
+        // Explicit bullet list
         const bulletPattern = /^[•\-\*\+▪◦▸▹●○]\s*/;
         const items = remainingLines.map(line => line.replace(bulletPattern, '').trim());
         blocks.push({
@@ -188,6 +226,7 @@ function parseTextToBlocks(text: string): TextBlock[] {
           content: items
         });
       } else {
+        // Regular paragraph
         blocks.push({
           type: 'paragraph',
           content: remainingLines.join(' ')
@@ -196,28 +235,11 @@ function parseTextToBlocks(text: string): TextBlock[] {
       continue;
     }
 
-    // Otherwise, split long paragraphs into sentences for better readability
-    // If it's a really long chunk, try to split it into multiple paragraphs
-    const combinedText = lines.join(' ');
-    if (combinedText.length > 500) {
-      // Split by sentence-ending punctuation followed by capital letter
-      const sentences = combinedText.split(/(?<=[.!?])\s+(?=[A-Z])/);
-
-      // Group every 3-4 sentences into a paragraph
-      const sentencesPerParagraph = 3;
-      for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
-        const paragraphSentences = sentences.slice(i, i + sentencesPerParagraph);
-        blocks.push({
-          type: 'paragraph',
-          content: paragraphSentences.join(' ')
-        });
-      }
-    } else {
-      blocks.push({
-        type: 'paragraph',
-        content: combinedText
-      });
-    }
+    // Otherwise, treat as paragraph (no aggressive splitting)
+    blocks.push({
+      type: 'paragraph',
+      content: lines.join(' ')
+    });
   }
 
   return blocks;
