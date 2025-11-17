@@ -77,6 +77,61 @@ function isTextList(lines: string[]): boolean {
 }
 
 /**
+ * Injects paragraph breaks around detected headers in continuous text
+ * This handles formatless text where everything is one continuous string
+ */
+function injectHeaderBreaks(text: string): string {
+  if (!text) return '';
+
+  // Comprehensive header patterns that match the actual data
+  const headerPatterns = [
+    'About the Team',
+    'About the Role',
+    'About the Position',
+    'About the Job',
+    'About the Company',
+    'You\'re excited about this opportunity because you will',
+    'You\'re excited about this role because you will',
+    'We\'re excited about you because',
+    'What you\'ll do',
+    'What you will do',
+    'Responsibilities',
+    'Your Responsibilities',
+    'Key Responsibilities',
+    'Requirements',
+    'Qualifications',
+    'What we\'re looking for',
+    'Benefits',
+    'What we offer',
+    'Compensation',
+    'Notice to Applicants',
+    'Statement of Non-Discrimination',
+    'Our Commitment to',
+    'About DoorDash',
+    'About ' // Generic "About X" pattern
+  ];
+
+  let result = text;
+
+  // For each pattern, insert breaks before it
+  headerPatterns.forEach(pattern => {
+    // Create regex that matches the pattern (case insensitive)
+    const regex = new RegExp(`(${pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+
+    // Replace with double newline before + the match
+    result = result.replace(regex, '\n\n$1');
+  });
+
+  // Clean up multiple consecutive breaks
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  // Trim leading/trailing whitespace
+  result = result.trim();
+
+  return result;
+}
+
+/**
  * Parse plain text into structured blocks
  * SSR-SAFE: No browser dependencies, works with formatless text
  */
@@ -85,8 +140,11 @@ function parseTextToBlocks(text: string): TextBlock[] {
 
   const blocks: TextBlock[] = [];
 
+  // First, inject breaks around detected headers (handles continuous text)
+  const textWithBreaks = injectHeaderBreaks(text);
+
   // Split by double newlines to get potential paragraphs
-  const chunks = text.split(/\n\n+/).map(chunk => chunk.trim()).filter(Boolean);
+  const chunks = textWithBreaks.split(/\n\n+/).map(chunk => chunk.trim()).filter(Boolean);
 
   for (const chunk of chunks) {
     const lines = chunk.split('\n').map(l => l.trim()).filter(Boolean);
@@ -138,11 +196,28 @@ function parseTextToBlocks(text: string): TextBlock[] {
       continue;
     }
 
-    // Otherwise, treat as paragraph
-    blocks.push({
-      type: 'paragraph',
-      content: lines.join(' ')
-    });
+    // Otherwise, split long paragraphs into sentences for better readability
+    // If it's a really long chunk, try to split it into multiple paragraphs
+    const combinedText = lines.join(' ');
+    if (combinedText.length > 500) {
+      // Split by sentence-ending punctuation followed by capital letter
+      const sentences = combinedText.split(/(?<=[.!?])\s+(?=[A-Z])/);
+
+      // Group every 3-4 sentences into a paragraph
+      const sentencesPerParagraph = 3;
+      for (let i = 0; i < sentences.length; i += sentencesPerParagraph) {
+        const paragraphSentences = sentences.slice(i, i + sentencesPerParagraph);
+        blocks.push({
+          type: 'paragraph',
+          content: paragraphSentences.join(' ')
+        });
+      }
+    } else {
+      blocks.push({
+        type: 'paragraph',
+        content: combinedText
+      });
+    }
   }
 
   return blocks;
