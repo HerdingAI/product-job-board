@@ -1,5 +1,6 @@
 import { Tag, AppJob } from './types'
 import { SupabaseJob } from './supabase'
+import { formatCamelCase } from './text-formatter'
 
 /**
  * Tag Parsing System for Product Careers Job Board
@@ -14,13 +15,13 @@ export const TAG_CATEGORIES = {
     priority: 1
   },
   'technical': {
-    label: 'Technical Skills', 
+    label: 'Technical Skills',
     color: 'bg-green-100 text-green-800',
     priority: 2
   },
   'domain': {
     label: 'Domain Expertise',
-    color: 'bg-purple-100 text-purple-800', 
+    color: 'bg-purple-100 text-purple-800',
     priority: 3
   }
 } as const
@@ -118,7 +119,6 @@ function parseCommaSeparated(
     .filter(value => value.length > 0)
     .map(value => {
       // Use formatCamelCase from text-formatter for consistent formatting
-      const { formatCamelCase } = require('./text-formatter')
       const label = skillMap?.[value] || formatCamelCase(value)
 
       return {
@@ -134,17 +134,17 @@ function parseCommaSeparated(
  */
 function extractKeywordsFromText(text: string, skillMap: Record<string, string>): string[] {
   if (!text) return []
-  
+
   const cleanText = text.toLowerCase()
   const keywords: string[] = []
-  
+
   // Look for skill keywords in the text
   Object.keys(skillMap).forEach(skill => {
     if (cleanText.includes(skill)) {
       keywords.push(skill)
     }
   })
-  
+
   return keywords
 }
 
@@ -153,7 +153,7 @@ function extractKeywordsFromText(text: string, skillMap: Record<string, string>)
  */
 export function extractTagsFromJob(job: SupabaseJob): Tag[] {
   const allTags: Tag[] = []
-  
+
   // 1. Core PM Skills (from dedicated field + description analysis)
   const coreSkillsFromField = parseCommaSeparated(job.core_pm_skills, 'core-pm', CORE_PM_SKILLS_MAP)
   const coreSkillsFromDesc = extractKeywordsFromText(job.description || '', CORE_PM_SKILLS_MAP)
@@ -162,10 +162,10 @@ export function extractTagsFromJob(job: SupabaseJob): Tag[] {
       category: 'core-pm' as const,
       color: TAG_CATEGORIES['core-pm'].color
     }))
-  
+
   allTags.push(...coreSkillsFromField)
   allTags.push(...coreSkillsFromDesc)
-  
+
   // 2. Technical Skills (from dedicated field + description analysis)
   const techSkillsFromField = parseCommaSeparated(job.technical_skills, 'technical', TECHNICAL_SKILLS_MAP)
   const techSkillsFromDesc = extractKeywordsFromText(job.description || '', TECHNICAL_SKILLS_MAP)
@@ -174,15 +174,15 @@ export function extractTagsFromJob(job: SupabaseJob): Tag[] {
       category: 'technical' as const,
       color: TAG_CATEGORIES.technical.color
     }))
-  
+
   allTags.push(...techSkillsFromField)
   allTags.push(...techSkillsFromDesc)
-  
+
   // 3. Domain Expertise
   if (job.domain_expertise) {
     allTags.push(...parseCommaSeparated(job.domain_expertise, 'domain', DOMAIN_EXPERTISE_MAP))
   }
-  
+
   // Also check product_domain field
   if (job.product_domain) {
     const domainTag = DOMAIN_EXPERTISE_MAP[job.product_domain.toLowerCase()] || job.product_domain
@@ -192,12 +192,12 @@ export function extractTagsFromJob(job: SupabaseJob): Tag[] {
       color: TAG_CATEGORIES.domain.color
     })
   }
-  
+
   // Remove duplicates based on label and category combination
-  const uniqueTags = allTags.filter((tag, index, self) => 
+  const uniqueTags = allTags.filter((tag, index, self) =>
     index === self.findIndex(t => t.label === tag.label && t.category === tag.category)
   )
-  
+
   // Sort by category priority and then alphabetically by label
   return uniqueTags.sort((a, b) => {
     const priorityDiff = TAG_CATEGORIES[a.category].priority - TAG_CATEGORIES[b.category].priority
@@ -222,7 +222,7 @@ export function getAllUniqueTagsFromJobs(jobs: AppJob[]): {
   domain: Tag[]
 } {
   const allTags = jobs.flatMap(job => job.tags)
-  
+
   return {
     corePm: [...new Map(filterTagsByCategory(allTags, 'core-pm').map(tag => [tag.label, tag])).values()],
     technical: [...new Map(filterTagsByCategory(allTags, 'technical').map(tag => [tag.label, tag])).values()],
@@ -243,9 +243,9 @@ export function tagToUrlParam(tag: Tag): string {
 export function tagFromUrlParam(param: string): Tag | null {
   const [category, labelSlug] = param.split(':')
   if (!category || !labelSlug || !(category in TAG_CATEGORIES)) return null
-  
+
   const label = labelSlug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-  
+
   return {
     label,
     category: category as keyof typeof TAG_CATEGORIES,

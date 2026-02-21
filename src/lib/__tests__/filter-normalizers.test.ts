@@ -18,9 +18,9 @@ import {
 
 // ==================== SENIORITY NORMALIZATION TESTS ====================
 
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 console.log('PM SENIORITY NORMALIZATION TESTS')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 
 const seniorityTests = [
   // Associate Product Manager
@@ -97,7 +97,7 @@ PM_SENIORITY_LEVELS.forEach((level, i) => {
 
 console.log('\n' + '='.repeat(80))
 console.log('LOCATION NORMALIZATION TESTS')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 
 const locationTests = [
   // Remote
@@ -177,7 +177,7 @@ console.log(`  Plus: Remote`)
 
 console.log('\n' + '='.repeat(80))
 console.log('WORK ARRANGEMENT NORMALIZATION TESTS (KEEPING - WORKING)')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 
 const workTests = [
   { input: 'remote', expected: 'Remote' },
@@ -205,7 +205,7 @@ if (workPassed === workTests.length) {
 
 console.log('\n' + '='.repeat(80))
 console.log('REVERSE MAPPING TESTS')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 
 console.log('\nSeniority Reverse Mapping:')
 const seniorityReversalTests = [
@@ -220,7 +220,7 @@ const seniorityReversalTests = [
 ]
 
 seniorityReversalTests.forEach(level => {
-  const dbValues = reverseNormalizeSeniority(level as any)
+  const dbValues = reverseNormalizeSeniority(level as any) // eslint-disable-line @typescript-eslint/no-explicit-any
   console.log(`  "${level}" → ${dbValues.length} DB values: [${dbValues.slice(0, 3).join(', ')}...]`)
 })
 
@@ -244,18 +244,18 @@ workReversalTests.forEach(work => {
 
 console.log('\n' + '='.repeat(80))
 console.log('CARDINALITY REDUCTION SUMMARY')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 
 console.log(`
 ✅ Seniority:
    High Cardinality (Input): 60+ variations
    Low Cardinality (Output): 8 standard PM levels
-   Reduction: ${((1 - 8/60) * 100).toFixed(0)}%
+   Reduction: ${((1 - 8 / 60) * 100).toFixed(0)}%
 
 ✅ Locations:
    High Cardinality (Input): 1000+ variations
    Low Cardinality (Output): ${getAllNormalizedCities().length} major cities
-   Reduction: ${((1 - getAllNormalizedCities().length/1000) * 100).toFixed(0)}%
+   Reduction: ${((1 - getAllNormalizedCities().length / 1000) * 100).toFixed(0)}%
 
 ✅ Work Arrangement:
    High Cardinality (Input): 30+ variations
@@ -263,11 +263,11 @@ console.log(`
    Reduction: 90%
 `)
 
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 console.log('FINAL SUMMARY')
-console.log('=' .repeat(80))
+console.log('='.repeat(80))
 console.log(`✅ Seniority: ${seniorityPassed}/${seniorityTests.length} tests passed`)
 console.log(`✅ Location: ${locationPassed}/${locationTests.length} tests passed`)
 console.log(`✅ Work Arrangement: ${workPassed}/${workTests.length} tests passed`)
 console.log(`✅ Total: ${seniorityPassed + locationPassed + workPassed}/${seniorityTests.length + locationTests.length + workTests.length} tests passed`)
-console.log('=' .repeat(80))
+console.log('='.repeat(80))

@@ -94,7 +94,7 @@ export function reverseFormatFilterValues(displayValue: string, filterType?: str
 
   // For seniority, use reverse normalization (returns all possible DB values)
   if (filterType === 'seniority') {
-    return reverseNormalizeSeniority(displayValue as any)
+    return reverseNormalizeSeniority(displayValue as any) // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 
   // For locations, use reverse normalization (returns all possible DB values)

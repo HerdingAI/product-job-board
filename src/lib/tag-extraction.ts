@@ -8,7 +8,7 @@ export interface ExtractedTags {
   responsibilities: string[];
   tools: string[];
   technical: string[];
-  
+
   // Sidebar tags (displayed in right sidebar)
   management: string[];
   kpis: string[];
@@ -19,15 +19,15 @@ export interface ExtractedTags {
 }
 
 /**
- * Main function to extract all tags from job data
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function extractJobTags(jobData: any): ExtractedTags {
   return {
     // Content tags
     responsibilities: parseResponsibilities(jobData.primary_responsibilities),
     tools: parseToolsPlatforms(jobData.tools_platforms),
     technical: parseTechnicalSkills(jobData.technical_skills),
-    
+
     // Sidebar tags
     management: parseManagementScope(jobData.reporting_structure),
     kpis: parseKpiOwnership(jobData.kpi_ownership),
@@ -45,10 +45,10 @@ export function extractJobTags(jobData: any): ExtractedTags {
  */
 function parseResponsibilities(data: string[] | string | null): string[] {
   if (!data) return [];
-  
+
   try {
     let responsibilities: string[] = [];
-    
+
     if (typeof data === 'string') {
       // Handle string format - could be JSON array or comma-separated
       if (data.startsWith('[') && data.endsWith(']')) {
@@ -59,11 +59,11 @@ function parseResponsibilities(data: string[] | string | null): string[] {
     } else if (Array.isArray(data)) {
       responsibilities = data;
     }
-    
+
     return responsibilities
       .filter(item => item && item.trim())
       .map(item => formatCamelCase(item.trim()));
-    
+
   } catch (error) {
     console.warn('Failed to parse responsibilities:', data, error);
     return [];
@@ -77,25 +77,26 @@ function parseResponsibilities(data: string[] | string | null): string[] {
  */
 function parseToolsPlatforms(data: object | string | null): string[] {
   if (!data) return [];
-  
+
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let toolsObj: Record<string, any> = {};
-    
+
     if (typeof data === 'string') {
       toolsObj = JSON.parse(data);
     } else if (typeof data === 'object') {
       toolsObj = data;
     }
-    
+
     const tools: string[] = [];
-    
+
     // Extract category names (keys) - these represent tool categories
     Object.keys(toolsObj).forEach(category => {
       if (category && category.trim()) {
         const formattedCategory = formatToolCategory(category);
         tools.push(formattedCategory);
       }
-      
+
       // Also extract any values from arrays if they exist
       const values = toolsObj[category];
       if (Array.isArray(values)) {
@@ -106,9 +107,9 @@ function parseToolsPlatforms(data: object | string | null): string[] {
         });
       }
     });
-    
+
     return [...new Set(tools)]; // Remove duplicates
-    
+
   } catch (error) {
     console.warn('Failed to parse tools_platforms:', data, error);
     return [];
@@ -122,7 +123,7 @@ function parseToolsPlatforms(data: object | string | null): string[] {
  */
 function parseTechnicalSkills(data: string | null): string[] {
   if (!data || typeof data !== 'string') return [];
-  
+
   return data
     .split(',')
     .map(skill => skill.trim())
@@ -135,11 +136,11 @@ function parseTechnicalSkills(data: string | null): string[] {
  */
 function parseManagementScope(reportingStructure: string | null): string[] {
   const tags: string[] = [];
-  
+
   if (reportingStructure) {
     tags.push(formatCamelCase(reportingStructure));
   }
-  
+
   return tags;
 }
 
@@ -150,10 +151,10 @@ function parseManagementScope(reportingStructure: string | null): string[] {
  */
 function parseKpiOwnership(data: string[] | string | null): string[] {
   if (!data) return [];
-  
+
   try {
     let kpis: string[] = [];
-    
+
     if (typeof data === 'string') {
       if (data.startsWith('[') && data.endsWith(']')) {
         kpis = JSON.parse(data);
@@ -163,11 +164,11 @@ function parseKpiOwnership(data: string[] | string | null): string[] {
     } else if (Array.isArray(data)) {
       kpis = data;
     }
-    
+
     return kpis
       .filter(kpi => kpi && kpi.trim())
       .map(kpi => formatCamelCase(kpi.trim()));
-    
+
   } catch (error) {
     console.warn('Failed to parse kpi_ownership:', data, error);
     return [];
@@ -175,86 +176,86 @@ function parseKpiOwnership(data: string[] | string | null): string[] {
 }
 
 /**
- * Parse product context information
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseProductContext(jobData: any): string[] {
   const tags: string[] = [];
-  
+
   if (jobData.product_lifecycle_focus) {
     tags.push(formatCamelCase(jobData.product_lifecycle_focus));
   }
-  
+
   if (jobData.product_domain) {
     tags.push(formatCamelCase(jobData.product_domain));
   }
-  
+
   if (jobData.domain_expertise) {
     tags.push(formatCamelCase(jobData.domain_expertise));
   }
-  
+
   return tags;
 }
 
 /**
- * Parse company information
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseCompanyInfo(jobData: any): string[] {
   const tags: string[] = [];
-  
+
   if (jobData.company_stage) {
     tags.push(formatCamelCase(jobData.company_stage));
   }
-  
+
   if (jobData.business_model) {
     tags.push(formatCamelCase(jobData.business_model));
   }
-  
+
   if (jobData.industry_vertical) {
     tags.push(formatCamelCase(jobData.industry_vertical));
   }
-  
+
   if (jobData.equity_mentioned === true || jobData.equity_mentioned === 1) {
     tags.push('Equity Offered');
   }
-  
+
   return tags;
 }
 
 /**
- * Parse experience information
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseExperience(jobData: any): string[] {
   const tags: string[] = [];
-  
+
   if (jobData.seniority_level) {
     tags.push(formatCamelCase(jobData.seniority_level));
   }
-  
+
   return tags;
 }
 
 /**
- * Parse location information
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseLocation(jobData: any): string[] {
   const tags: string[] = [];
-  
+
   if (jobData.work_arrangement) {
     tags.push(formatCamelCase(jobData.work_arrangement));
   }
-  
+
   if (jobData.is_remote === 1 && jobData.remote_flexibility) {
     tags.push(formatCamelCase(jobData.remote_flexibility));
   }
-  
+
   if (jobData.is_hybrid === 1) {
     tags.push('Hybrid');
   }
-  
+
   if (jobData.is_remote === 1) {
     tags.push('Remote');
   }
-  
+
   return tags;
 }
 
@@ -263,7 +264,7 @@ function parseLocation(jobData: any): string[] {
  */
 export function formatCamelCase(text: string): string {
   if (!text) return '';
-  
+
   // Handle special cases first
   const specialCases: Record<string, string> = {
     'revenue_arr': 'Revenue ARR',
@@ -301,12 +302,12 @@ export function formatCamelCase(text: string): string {
     'principal_pm': 'Principal PM',
     'staff_pm': 'Staff PM'
   };
-  
+
   const lowerText = text.toLowerCase();
   if (specialCases[lowerText]) {
     return specialCases[lowerText];
   }
-  
+
   // General conversion: "company_stage" -> "Company Stage"
   return text
     .split(/[_\s-]+/)
@@ -327,7 +328,7 @@ function formatToolCategory(category: string): string {
     'project_management': 'Project Management',
     'data': 'Data Tools'
   };
-  
+
   return categoryMappings[category.toLowerCase()] || formatCamelCase(category);
 }
 
@@ -335,23 +336,23 @@ function formatToolCategory(category: string): string {
  * Format experience bucket to readable format
  */
 /**
- * Get formatted location string with coalescing
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getFormattedLocation(jobData: any): string {
   return jobData.location_metro || jobData.location_city || 'Location TBD';
 }
 
 /**
- * Get formatted years of experience string
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getFormattedExperience(jobData: any): string {
   const { years_experience_min, years_experience_max } = jobData;
-  
+
   if (years_experience_min && years_experience_max) {
     return `${years_experience_min}-${years_experience_max} years as PM`;
   } else if (years_experience_min) {
     return `${years_experience_min}+ years as PM`;
   }
-  
+
   return 'Experience TBD';
 }

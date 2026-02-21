@@ -302,7 +302,7 @@ export function parseJobDescription(rawHtml: string): ParsedJobContent {
 
   // Convert blocks to sections format
   const sections: ParsedJobContent['sections'] = [];
-  let hasStructure = blocks.some(b => b.type === 'header');
+  const hasStructure = blocks.some(b => b.type === 'header');
 
   for (const block of blocks) {
     if (block.type === 'header') {
@@ -373,14 +373,14 @@ export function extractJobSections(content: ParsedJobContent): JobSections {
     // Check each section type
     Object.entries(sectionKeywords).forEach(([sectionType, keywords]) => {
       if (matched) return;
-      
-      const isMatch = keywords.some(keyword => 
+
+      const isMatch = keywords.some(keyword =>
         titleLower.includes(keyword.toLowerCase())
       );
-      
+
       if (isMatch) {
         matched = true;
-        
+
         if (sectionType === 'responsibilities' || sectionType === 'requirements') {
           // Convert to array format for list-based sections
           sections[sectionType] = parseListContent(section.content);
@@ -394,10 +394,10 @@ export function extractJobSections(content: ParsedJobContent): JobSections {
 
     // If no match, add to 'other'
     if (!matched) {
-      const sectionText = section.title ? 
-        `${section.title}\n${section.content}` : 
+      const sectionText = section.title ?
+        `${section.title}\n${section.content}` :
         section.content;
-      
+
       sections.other += (sections.other ? '\n\n' : '') + sectionText;
     }
   });
@@ -410,151 +410,6 @@ export function extractJobSections(content: ParsedJobContent): JobSections {
   return sections;
 }
 
-/**
- * Gets content between two headers
- */
-function getContentBetweenHeaders(
-  startHeader: Element, 
-  endHeader: Element | null
-): { text: string; hasLists: boolean } {
-  const content: string[] = [];
-  let hasLists = false;
-  let currentElement = startHeader.nextElementSibling;
-
-  while (currentElement && currentElement !== endHeader) {
-    if (currentElement.tagName.match(/^H[1-6]$/)) {
-      break; // Stop at another header
-    }
-
-    if (currentElement.tagName === 'UL' || currentElement.tagName === 'OL') {
-      hasLists = true;
-      // Extract list items
-      const listItems = Array.from(currentElement.querySelectorAll('li'))
-        .map(li => `• ${cleanText(li.textContent || '')}`)
-        .filter(item => item.trim() !== '•');
-      
-      content.push(...listItems);
-    } else {
-      const text = cleanText(currentElement.textContent || '');
-      if (text) {
-        content.push(text);
-      }
-    }
-
-    currentElement = currentElement.nextElementSibling;
-  }
-
-  return {
-    text: content.join('\n').trim(),
-    hasLists
-  };
-}
-
-/**
- * Extracts clean text content from an element, preserving structure
- */
-function extractTextContent(element: Element | Document): string {
-  if (!element) return '';
-
-  const result: string[] = [];
-
-  // Process all child nodes recursively
-  const processNode = (node: Node): void => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent?.trim();
-      if (text) {
-        result.push(text);
-      }
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element;
-      const tagName = element.tagName.toLowerCase();
-
-      // Handle different HTML elements
-      if (tagName === 'p' || tagName === 'div') {
-        // Add paragraph break before (if needed)
-        if (result.length > 0) {
-          const lastItem = result[result.length - 1];
-          if (lastItem !== '\n\n' && lastItem !== '\n') {
-            result.push('\n\n');
-          }
-        }
-        // Process children
-        Array.from(element.childNodes).forEach(processNode);
-        // Add paragraph break after (if content was added)
-        const lastItem = result[result.length - 1];
-        if (lastItem && lastItem !== '\n\n' && lastItem !== '\n') {
-          result.push('\n\n');
-        }
-      } else if (tagName === 'br') {
-        result.push('\n');
-      } else if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-        // Add header formatting
-        result.push('\n\n');
-        const text = element.textContent?.trim();
-        if (text) {
-          result.push(`**${text}**`);
-        }
-        result.push('\n\n');
-      } else if (tagName === 'ul' || tagName === 'ol') {
-        // Handle lists
-        result.push('\n');
-        Array.from(element.children).forEach(li => {
-          if (li.tagName.toLowerCase() === 'li') {
-            const text = li.textContent?.trim();
-            if (text) {
-              result.push(`• ${text}\n`);
-            }
-          }
-        });
-        result.push('\n');
-      } else if (tagName === 'li') {
-        // Individual list item (in case not caught by ul/ol)
-        const text = element.textContent?.trim();
-        if (text) {
-          result.push(`• ${text}\n`);
-        }
-      } else if (tagName === 'strong' || tagName === 'b') {
-        const text = element.textContent?.trim();
-        if (text) {
-          result.push(`**${text}**`);
-        }
-      } else if (tagName === 'em' || tagName === 'i') {
-        const text = element.textContent?.trim();
-        if (text) {
-          result.push(`*${text}*`);
-        }
-      } else {
-        // For other elements, just process children
-        Array.from(element.childNodes).forEach(processNode);
-      }
-    }
-  };
-
-  // Start processing from the root element
-  if (element.nodeType === Node.DOCUMENT_NODE) {
-    const doc = element as Document;
-    if (doc.body) {
-      Array.from(doc.body.childNodes).forEach(processNode);
-    }
-  } else {
-    Array.from(element.childNodes).forEach(processNode);
-  }
-
-  // Join and clean up the result
-  let text = result.join('');
-
-  // Clean up whitespace while preserving structure
-  text = text
-    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines (paragraph breaks)
-    .replace(/^\s+|\s+$/g, '') // Trim start and end
-    .split('\n') // Split into lines
-    .map(line => line.replace(/\s+/g, ' ').trim()) // Clean whitespace WITHIN lines only
-    .join('\n') // Rejoin with newlines preserved
-    .replace(/\n\s+/g, '\n') // Remove spaces after newlines
-    .replace(/\s+\n/g, '\n'); // Remove spaces before newlines
-
-  return text;
-}
 
 /**
  * Parses list content into array format
@@ -593,29 +448,29 @@ function cleanText(text: string): string {
  */
 export function extractCleanTextPreview(htmlContent: string, maxLength = 200): string {
   if (!htmlContent) return '';
-  
+
   // Create a temporary DOM element to parse HTML safely
   if (typeof window !== 'undefined') {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
-    
+
     // Remove any script, style, img, video, etc. tags
     const unwantedElements = tempDiv.querySelectorAll('script, style, img, video, audio, iframe, object, embed');
     unwantedElements.forEach(el => el.remove());
-    
+
     // Get clean text content
     let cleanContent = tempDiv.textContent || tempDiv.innerText || '';
-    
+
     // Clean and limit the text
     cleanContent = cleanText(cleanContent);
-    
+
     if (cleanContent.length > maxLength) {
       cleanContent = cleanContent.slice(0, maxLength).trim() + '…';
     }
-    
+
     return cleanContent;
   }
-  
+
   // Server-side fallback: use regex to strip HTML tags
   const textOnly = htmlContent
     .replace(/<script[^>]*>.*?<\/script>/gi, '') // Remove scripts
@@ -625,7 +480,7 @@ export function extractCleanTextPreview(htmlContent: string, maxLength = 200): s
     .replace(/&[a-z]+;/gi, ' ') // Remove HTML entities
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
-  
+
   return textOnly.length > maxLength ? textOnly.slice(0, maxLength).trim() + '…' : textOnly;
 }
 
