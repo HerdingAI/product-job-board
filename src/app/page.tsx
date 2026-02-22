@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { mapSupabaseJobToAppJob } from '@/lib/data-mapper'
 import { AppJob, FilterState, Tag } from '@/lib/types'
-import { Search, MapPin, Clock, Building, Sliders } from 'lucide-react'
+import { Search, MapPin, Clock, Building, Sliders, Tag as TagIcon, X } from 'lucide-react'
 import { formatJobDate, formatSalaryRange } from '@/lib/data-mapper'
 import { searchJobs, highlightSafe, highlight } from '@/lib/search'
 import { extractCleanTextPreview } from '@/lib/html-parser'
 import type { SupabaseJob } from '@/lib/supabase'
 import { tagToUrlParam, tagFromUrlParam } from '@/lib/tag-parser'
+import { TagFilter } from '@/components/TagFilter'
+import { ActiveTagsDisplay } from '@/components/ActiveTagsDisplay'
 import { usePerformance } from '@/hooks/usePerformance'
 import {
   formatSeniorityLevel,
@@ -25,9 +27,9 @@ import {
 } from '@/lib/filter-formatters'
 
 // Lazy load the AdvancedFilterSidebar for better performance
-const AdvancedFilterSidebar = lazy(() => 
-  import('@/components/AdvancedFilterSidebar').then(module => ({ 
-    default: module.AdvancedFilterSidebar 
+const AdvancedFilterSidebar = lazy(() =>
+  import('@/components/AdvancedFilterSidebar').then(module => ({
+    default: module.AdvancedFilterSidebar
   }))
 )
 
@@ -49,8 +51,8 @@ const JobCard = memo(({ job, searchTerm }: { job: AppJob; searchTerm: string }) 
           <div className="flex items-center">
             <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-500 flex-shrink-0" />
             <span className="truncate">
-              {job.location.metro || job.location.city || 
-               (job.location.isRemote ? 'Remote' : 'Location TBD')}
+              {job.location.metro || job.location.city ||
+                (job.location.isRemote ? 'Remote' : 'Location TBD')}
             </span>
           </div>
           <div className="flex items-center">
@@ -74,14 +76,14 @@ const JobCard = memo(({ job, searchTerm }: { job: AppJob; searchTerm: string }) 
     </div>
 
     {/* Job Description Preview with optional highlighting - Clean Text Only */}
-    <p 
-      className="text-gray-300 mb-3 sm:mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base" 
-      dangerouslySetInnerHTML={{ 
+    <p
+      className="text-gray-300 mb-3 sm:mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base"
+      dangerouslySetInnerHTML={{
         __html: highlightSafe(
-          extractCleanTextPreview(job.description, 180), 
+          extractCleanTextPreview(job.description, 180),
           searchTerm
-        ) 
-      }} 
+        )
+      }}
     />
 
     {/* Tags */}
@@ -93,9 +95,9 @@ const JobCard = memo(({ job, searchTerm }: { job: AppJob; searchTerm: string }) 
             className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-medium transition-all duration-200 hover:scale-105
               ${tag.category === 'core-pm' ? 'bg-blue-900/30 text-blue-300 border border-blue-800/50' :
                 tag.category === 'technical' ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-800/50' :
-                tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
-                tag.category === 'leadership' ? 'bg-orange-900/30 text-orange-300 border border-orange-800/50' :
-                'bg-gray-800/50 text-gray-300 border border-gray-700/50'}`}
+                  tag.category === 'domain' ? 'bg-violet-900/30 text-violet-300 border border-violet-800/50' :
+                    tag.category === 'leadership' ? 'bg-orange-900/30 text-orange-300 border border-orange-800/50' :
+                      'bg-gray-800/50 text-gray-300 border border-gray-700/50'}`}
           >
             {tag.label}
           </span>
@@ -127,7 +129,7 @@ const JobCard = memo(({ job, searchTerm }: { job: AppJob; searchTerm: string }) 
           </span>
         )}
       </div>
-      <Link 
+      <Link
         href={`/jobs/${job.id}`}
         className="inline-flex items-center text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors duration-200 group self-start sm:self-auto"
       >
@@ -143,13 +145,13 @@ JobCard.displayName = 'JobCard'
 export default function HomePage() {
   // Performance monitoring
   const { startTimer, updateJobCount, logMetrics } = usePerformance()
-  
+
   // Search input ref for focus management
   const searchInputRef = useRef<HTMLInputElement>(null)
-  
+
   // Next.js routing hooks for URL state management
   const router = useRouter()
-  
+
   const [jobs, setJobs] = useState<AppJob[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -159,10 +161,26 @@ export default function HomePage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 50, hasNextPage: false })
   const [totalLoaded, setTotalLoaded] = useState(0)
   const [canLoadMore, setCanLoadMore] = useState(true)
-  
+
   // Separate state for search input to enable debouncing
   const [searchInput, setSearchInput] = useState('')
   const [isSearchPending, setIsSearchPending] = useState(false)
+  const [showTagFilter, setShowTagFilter] = useState(false)
+
+  // Get all unique tags from currently loaded jobs for the filter dropdown
+  const availableTags = useMemo(() => {
+    const tagMap = new Map<string, Tag>()
+    jobs.forEach(job => {
+      job.tags.forEach(tag => {
+        const key = `${tag.category}-${tag.label}`
+        if (!tagMap.has(key)) {
+          tagMap.set(key, tag)
+        }
+      })
+    })
+    return Array.from(tagMap.values())
+  }, [jobs])
+
   const [actualFilterValues, setActualFilterValues] = useState<{
     seniority: string[]
     location: string[]
@@ -186,7 +204,7 @@ export default function HomePage() {
     experienceBucket: [],
     domainExpertise: []
   })
-  
+
   // Initialize filters from URL parameters
   const [filters, setFilters] = useState<FilterState>(() => {
     const initialFilters: FilterState = {
@@ -202,22 +220,22 @@ export default function HomePage() {
       experienceBucket: [],
       domainExpertise: [],
       activeTags: [],
-  showAdvancedFilters: false,
-  sortBy: 'relevance',
-  resultsPerPage: 50,
-  currentPage: 1
+      showAdvancedFilters: false,
+      sortBy: 'relevance',
+      resultsPerPage: 50,
+      currentPage: 1
     }
-    
+
     // If we're on the client side, parse URL parameters
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      
+
       // Parse single-value filters
       if (params.get('search')) initialFilters.search = params.get('search') || ''
       if (params.get('seniority')) initialFilters.seniority = params.get('seniority') || ''
       if (params.get('location')) initialFilters.location = params.get('location') || ''
       if (params.get('workArrangement')) initialFilters.workArrangement = params.get('workArrangement') || ''
-      
+
       // Parse multi-value filters
       if (params.get('companyStage')) {
         initialFilters.companyStage = params.get('companyStage')?.split(',') || []
@@ -240,43 +258,81 @@ export default function HomePage() {
       if (params.get('domainExpertise')) {
         initialFilters.domainExpertise = params.get('domainExpertise')?.split(',') || []
       }
-      
+
       // Parse salary filters
       if (params.get('salaryMin')) {
         initialFilters.salaryMin = parseInt(params.get('salaryMin') || '0') || undefined
-      }
-      if (params.get('salaryMax')) {
         initialFilters.salaryMax = parseInt(params.get('salaryMax') || '0') || undefined
       }
-      
-      // Parse tags
+
+      // Parse active tags
       if (params.get('tags')) {
-        const tagParams = params.get('tags')?.split(',') || []
-        initialFilters.activeTags = tagParams
-          .map(tagFromUrlParam)
-          .filter((tag): tag is Tag => tag !== null)
+        const tagUrlStr = params.get('tags') || ''
+        if (tagUrlStr) {
+          const tags = tagUrlStr.split(',').map(tagFromUrlParam).filter(Boolean) as Tag[]
+          initialFilters.activeTags = tags
+        }
       }
 
-  // Parse pagination
-  const pageParam = params.get('page')
-  const limitParam = params.get('limit')
-  if (pageParam) initialFilters.currentPage = Math.max(1, parseInt(pageParam))
-  if (limitParam) initialFilters.resultsPerPage = Math.max(1, parseInt(limitParam))
+      // Parse pagination
+      const pageParam = params.get('page')
+      const limitParam = params.get('limit')
+      if (pageParam) initialFilters.currentPage = Math.max(1, parseInt(pageParam))
+      if (limitParam) initialFilters.resultsPerPage = Math.max(1, parseInt(limitParam))
     }
-    
+
     return initialFilters
   })
+
+  // Tag filter handlers
+  const handleTagClick = useCallback((tag: Tag) => {
+    setFilters(prev => {
+      const isAlreadyActive = prev.activeTags.some(
+        t => t.label === tag.label && t.category === tag.category
+      )
+
+      if (isAlreadyActive) {
+        return {
+          ...prev,
+          activeTags: prev.activeTags.filter(
+            t => !(t.label === tag.label && t.category === tag.category)
+          )
+        }
+      } else {
+        return {
+          ...prev,
+          activeTags: [...prev.activeTags, tag]
+        }
+      }
+    })
+  }, [])
+
+  const handleRemoveTag = useCallback((tagToRemove: Tag) => {
+    setFilters(prev => ({
+      ...prev,
+      activeTags: prev.activeTags.filter(
+        t => !(t.label === tagToRemove.label && t.category === tagToRemove.category)
+      )
+    }))
+  }, [])
+
+  const handleClearTags = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      activeTags: []
+    }))
+  }, [])
 
   // URL synchronization function
   const updateUrl = useCallback((newFilters: FilterState) => {
     const params = new URLSearchParams()
-    
+
     // Add non-empty single-value filters
     if (newFilters.search?.trim()) params.set('search', newFilters.search.trim())
     if (newFilters.seniority?.trim()) params.set('seniority', newFilters.seniority.trim())
     if (newFilters.location?.trim()) params.set('location', newFilters.location.trim())
     if (newFilters.workArrangement?.trim()) params.set('workArrangement', newFilters.workArrangement.trim())
-    
+
     // Add non-empty multi-value filters
     if (newFilters.companyStage?.length) params.set('companyStage', newFilters.companyStage.join(','))
     if (newFilters.productLifecycle?.length) params.set('productLifecycle', newFilters.productLifecycle.join(','))
@@ -285,25 +341,25 @@ export default function HomePage() {
     if (newFilters.industryVertical?.length) params.set('industryVertical', newFilters.industryVertical.join(','))
     if (newFilters.experienceBucket?.length) params.set('experienceBucket', newFilters.experienceBucket.join(','))
     if (newFilters.domainExpertise?.length) params.set('domainExpertise', newFilters.domainExpertise.join(','))
-    
+
     // Add salary filters
     if (newFilters.salaryMin) params.set('salaryMin', newFilters.salaryMin.toString())
     if (newFilters.salaryMax) params.set('salaryMax', newFilters.salaryMax.toString())
-    
+
     // Add tags
     if (newFilters.activeTags?.length) {
       const tagParams = newFilters.activeTags.map(tagToUrlParam).join(',')
       params.set('tags', tagParams)
     }
-    
-  // Pagination params
-  if (newFilters.resultsPerPage) params.set('limit', String(newFilters.resultsPerPage))
-  if (newFilters.currentPage) params.set('page', String(newFilters.currentPage))
 
-  // Update URL without page reload
+    // Pagination params
+    if (newFilters.resultsPerPage) params.set('limit', String(newFilters.resultsPerPage))
+    if (newFilters.currentPage) params.set('page', String(newFilters.currentPage))
+
+    // Update URL without page reload
     const queryString = params.toString()
     const newUrl = queryString ? `/?${queryString}` : '/'
-    
+
     // Only update if the URL actually changed to avoid infinite loops
     if (window.location.pathname + window.location.search !== newUrl) {
       router.push(newUrl, { scroll: false })
@@ -331,12 +387,12 @@ export default function HomePage() {
   // Manual search handler for search button
   const handleManualSearch = useCallback(async () => {
     if (isSearching) return;
-    
+
     // Reset to first page for new search
     if (filters.currentPage !== 1) {
       setFilters(prevFilters => ({ ...prevFilters, currentPage: 1 }));
     }
-    
+
     // Clear search pending state and trigger search
     setIsSearchPending(false);
     handleFilterChange({ search: searchInput });
@@ -354,7 +410,7 @@ export default function HomePage() {
           input.setSelectionRange(input.value.length, input.value.length)
         }
       }, 100)
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [jobs, loading, searchInput]) // Focus when jobs update and user has searched
@@ -363,7 +419,7 @@ export default function HomePage() {
   const fetchActualFilterValues = useCallback(async () => {
     try {
       console.log('🔍 Fetching actual filter values from database...')
-      
+
       // First, let's test if we can reach the jobs table at all
       const { data: testJobs, error: testError } = await supabase
         .from('jobs')
@@ -371,15 +427,15 @@ export default function HomePage() {
         .eq('is_currently_active', true)
         .eq('is_product_job', true)
         .limit(5)
-      
+
       if (testError) {
         console.error('❌ Database connection error:', testError)
         return
       }
-      
+
       console.log('✅ Database connection working. Found', testJobs?.length, 'jobs')
       console.log('📋 Sample jobs:', testJobs?.map(j => j.title).slice(0, 3))
-      
+
       // Now try the actual filter query - using CORRECT schema field names from the database
       const { data: allJobs, error } = await supabase
         .from('jobs')
@@ -387,14 +443,14 @@ export default function HomePage() {
         .eq('is_currently_active', true)
         .eq('is_product_job', true)
         .limit(1000) // Get a good sample
-      
+
       if (error) {
         console.error('❌ Filter values query error:', error)
         return
       }
-      
+
       console.log('✅ Filter query successful. Got', allJobs?.length, 'jobs for filter extraction')
-      
+
       if (allJobs) {
         // Extract and FORMAT unique values with proper display formatting
 
@@ -464,7 +520,7 @@ export default function HomePage() {
             .filter(Boolean)
             .map(de => formatFilterValue(de, 'domainExpertise'))
         )].sort()
-        
+
         console.log('🔍 Actual database values:')
         console.log('  Seniority:', seniority)
         console.log('  Location:', location)
@@ -476,7 +532,7 @@ export default function HomePage() {
         console.log('  Industry Vertical:', industryVertical)
         console.log('  Experience Bucket:', experienceBucket)
         console.log('  Domain Expertise:', domainExpertise)
-        
+
         setActualFilterValues({
           seniority,
           location,
@@ -505,11 +561,11 @@ export default function HomePage() {
     setLoading(true)
     setIsSearching(true)
     setError(null)
-    
+
     try {
       console.log('=== FETCH JOBS START ===')
       console.log('Current filters:', filters)
-      
+
       const shouldUseSearch = Boolean(filters.search && filters.search.trim().length > 0)
       if (shouldUseSearch) {
         const page = filters.currentPage || 1
@@ -640,9 +696,9 @@ export default function HomePage() {
         setCanLoadMore(mapped.length < 1000 && mapped.length >= (filters.resultsPerPage || 50))
         setPagination({ page: 1, limit: filters.resultsPerPage || 50, hasNextPage: false })
       }
-      
-  // Note: removed legacy debug and centralized tag filtering within data branches
-      
+
+      // Note: removed legacy debug and centralized tag filtering within data branches
+
     } catch (err) {
       console.error('Search API error:', err)
       setError('An unexpected error occurred. Please try again.')
@@ -688,7 +744,7 @@ export default function HomePage() {
 
     const { data, error: fetchError } = await query
     if (fetchError) throw fetchError
-    
+
     let newJobs = (data || []).map(mapSupabaseJobToAppJob)
     if (filters.activeTags && filters.activeTags.length > 0) {
       newJobs = newJobs.filter(job =>
@@ -697,7 +753,7 @@ export default function HomePage() {
         )
       )
     }
-    
+
     const updatedJobs = [...jobs, ...newJobs]
     setJobs(updatedJobs)
     setTotalLoaded(updatedJobs.length)
@@ -708,19 +764,19 @@ export default function HomePage() {
   // Load more jobs function - appends to existing jobs
   const loadMoreJobs = useCallback(async () => {
     if (!canLoadMore || loadingMore || totalLoaded >= 1000) return
-    
+
     setLoadingMore(true)
     setError(null)
-    
+
     try {
       const nextPage = pagination.page + 1
       const limit = pagination.limit
-      
+
       console.log('=== LOAD MORE JOBS ===')
       console.log('Loading page:', nextPage, 'Current total:', totalLoaded)
-      
+
       const shouldUseSearch = Boolean(filters.search && filters.search.trim().length > 0)
-      
+
       if (shouldUseSearch) {
         try {
           const result = await searchJobs({
@@ -731,7 +787,7 @@ export default function HomePage() {
           })
           const rpcRows = (result.jobs || []) as Array<SupabaseJob & { search_rank?: number }>
           let newJobs = rpcRows.map(row => mapSupabaseJobToAppJob(row))
-          
+
           if (filters.activeTags && filters.activeTags.length > 0) {
             newJobs = newJobs.filter(job =>
               filters.activeTags!.every(selectedTag =>
@@ -739,13 +795,13 @@ export default function HomePage() {
               )
             )
           }
-          
+
           const updatedJobs = [...jobs, ...newJobs]
           setJobs(updatedJobs)
           setTotalLoaded(updatedJobs.length)
           setCanLoadMore(updatedJobs.length < 1000 && newJobs.length === limit && (result.pagination?.hasNextPage || false))
           setPagination({ page: nextPage, limit, hasNextPage: result.pagination?.hasNextPage || false })
-          
+
         } catch (e) {
           console.warn('[loadMore] Search failed, trying regular query:', e)
           // Fallback to regular query
@@ -754,7 +810,7 @@ export default function HomePage() {
       } else {
         await loadMoreWithRegularQuery(nextPage, limit)
       }
-      
+
     } catch (err) {
       console.error('Load more error:', err)
       setError('Failed to load more jobs. Please try again.')
@@ -769,7 +825,7 @@ export default function HomePage() {
     setTotalLoaded(0)
     setCanLoadMore(true)
     setPagination({ page: 1, limit: 50, hasNextPage: false })
-    
+
     // Only auto-fetch for filter changes, not for manual search
     fetchJobs()
   }, [filters])
@@ -778,10 +834,10 @@ export default function HomePage() {
   const memoizedJobList = useMemo(() => (
     <div className="space-y-3 sm:space-y-4">
       {jobs.map((job) => (
-        <JobCard 
-          key={job.id} 
-          job={job} 
-          searchTerm={filters.search || ''} 
+        <JobCard
+          key={job.id}
+          job={job}
+          searchTerm={filters.search || ''}
         />
       ))}
     </div>
@@ -806,7 +862,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8">
           <div className="text-center py-8 sm:py-12">
             <p className="text-red-400 mb-4 text-sm sm:text-base">{error}</p>
-            <button 
+            <button
               onClick={fetchJobs}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm sm:text-base"
             >
@@ -844,7 +900,7 @@ export default function HomePage() {
           actualFilterValues={actualFilterValues}
         />
       </Suspense>
-      
+
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
         {/* Header Section */}
         <div className="text-center mb-8 sm:mb-12">
@@ -880,14 +936,14 @@ export default function HomePage() {
                 }}
                 className="input-modern w-full pl-10 sm:pl-12 pr-10 sm:pr-12 py-3 sm:py-4 text-sm sm:text-base placeholder-gray-500 focus:placeholder-gray-400"
               />
-              
+
               {/* Search pending indicator */}
               {isSearchPending && (
                 <div className="absolute right-10 sm:right-12 top-1/2 transform -translate-y-1/2">
                   <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
                 </div>
               )}
-              
+
               {searchInput.trim() && (
                 <button
                   onClick={() => setSearchInput('')}
@@ -983,15 +1039,27 @@ export default function HomePage() {
               <Sliders className="h-4 w-4 mr-2" />
               Advanced Filters
             </button>
+            <button
+              onClick={() => setShowTagFilter(!showTagFilter)}
+              className="btn-modern flex items-center justify-center bg-gray-900 border-gray-700 hover:bg-gray-800"
+            >
+              <TagIcon className="h-4 w-4 mr-2" />
+              Skills & Tags
+              {filters.activeTags?.length > 0 && (
+                <span className="ml-2 bg-blue-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {filters.activeTags.length}
+                </span>
+              )}
+            </button>
           </div>
 
           <div className="flex justify-between items-center">
             <button
-              onClick={() => setFilters({ 
-                search: '', 
-                seniority: '', 
-                location: '', 
-                workArrangement: '', 
+              onClick={() => setFilters({
+                search: '',
+                seniority: '',
+                location: '',
+                workArrangement: '',
                 companyStage: [],
                 productLifecycle: [],
                 productDomain: [],
@@ -1011,72 +1079,108 @@ export default function HomePage() {
         </div>
 
         {/* Active Filters Display */}
-        {(filters.companyStage?.length || filters.productLifecycle?.length || filters.productDomain?.length || 
-          filters.managementScope?.length || filters.industryVertical?.length || filters.experienceBucket?.length || 
+        {(filters.companyStage?.length || filters.productLifecycle?.length || filters.productDomain?.length ||
+          filters.managementScope?.length || filters.industryVertical?.length || filters.experienceBucket?.length ||
           filters.domainExpertise?.length || filters.salaryMin || filters.salaryMax) && (
-          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm font-medium text-blue-900">Active Advanced Filters:</h4>
+            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-blue-900">Active Advanced Filters:</h4>
+                <button
+                  onClick={() => setFilters(prev => ({
+                    ...prev,
+                    companyStage: [],
+                    productLifecycle: [],
+                    productDomain: [],
+                    managementScope: [],
+                    industryVertical: [],
+                    experienceBucket: [],
+                    domainExpertise: [],
+                    salaryMin: undefined,
+                    salaryMax: undefined
+                  }))}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Clear Advanced
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {filters.companyStage?.map(stage => (
+                  <span key={stage} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                    Company: {stage}
+                  </span>
+                ))}
+                {filters.productLifecycle?.map(lifecycle => (
+                  <span key={lifecycle} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                    Lifecycle: {lifecycle}
+                  </span>
+                ))}
+                {filters.productDomain?.map(domain => (
+                  <span key={domain} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                    Domain: {domain}
+                  </span>
+                ))}
+                {filters.managementScope?.map(scope => (
+                  <span key={scope} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                    Management: {scope}
+                  </span>
+                ))}
+                {filters.industryVertical?.map(industry => (
+                  <span key={industry} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800">
+                    Industry: {industry}
+                  </span>
+                ))}
+                {filters.experienceBucket?.map(experience => (
+                  <span key={experience} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-cyan-100 text-cyan-800">
+                    Experience: {experience}
+                  </span>
+                ))}
+                {filters.domainExpertise?.map(domain => (
+                  <span key={domain} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-teal-100 text-teal-800">
+                    Domain: {domain}
+                  </span>
+                ))}
+                {(filters.salaryMin || filters.salaryMax) && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800">
+                    Salary: {filters.salaryMin ? `$${Math.floor(filters.salaryMin / 1000)}K` : '0'} - {filters.salaryMax ? `$${Math.floor(filters.salaryMax / 1000)}K` : '∞'}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+        {/* Tag Filter Dropdown */}
+        {showTagFilter && (
+          <div className="mb-6 bg-black/40 border border-gray-800 p-4 sm:p-6 rounded-xl animate-fade-in relative shadow-lg z-10">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-800 pb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center">
+                <TagIcon className="h-5 w-5 mr-2 text-blue-400" />
+                Filter by Skills & Tags
+              </h3>
               <button
-                onClick={() => setFilters(prev => ({
-                  ...prev,
-                  companyStage: [],
-                  productLifecycle: [],
-                  productDomain: [],
-                  managementScope: [],
-                  industryVertical: [],
-                  experienceBucket: [],
-                  domainExpertise: [],
-                  salaryMin: undefined,
-                  salaryMax: undefined
-                }))}
-                className="text-xs text-blue-600 hover:text-blue-800"
+                onClick={() => setShowTagFilter(false)}
+                className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                aria-label="Close tag filter"
               >
-                Clear Advanced
+                <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {filters.companyStage?.map(stage => (
-                <span key={stage} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
-                  Company: {stage}
-                </span>
-              ))}
-              {filters.productLifecycle?.map(lifecycle => (
-                <span key={lifecycle} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                  Lifecycle: {lifecycle}
-                </span>
-              ))}
-              {filters.productDomain?.map(domain => (
-                <span key={domain} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
-                  Domain: {domain}
-                </span>
-              ))}
-              {filters.managementScope?.map(scope => (
-                <span key={scope} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
-                  Management: {scope}
-                </span>
-              ))}
-              {filters.industryVertical?.map(industry => (
-                <span key={industry} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-indigo-100 text-indigo-800">
-                  Industry: {industry}
-                </span>
-              ))}
-              {filters.experienceBucket?.map(experience => (
-                <span key={experience} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-cyan-100 text-cyan-800">
-                  Experience: {experience}
-                </span>
-              ))}
-              {filters.domainExpertise?.map(domain => (
-                <span key={domain} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-teal-100 text-teal-800">
-                  Domain: {domain}
-                </span>
-              ))}
-              {(filters.salaryMin || filters.salaryMax) && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-800">
-                  Salary: {filters.salaryMin ? `$${Math.floor(filters.salaryMin/1000)}K` : '0'} - {filters.salaryMax ? `$${Math.floor(filters.salaryMax/1000)}K` : '∞'}
-                </span>
-              )}
-            </div>
+
+            <TagFilter
+              tags={availableTags}
+              activeTags={filters.activeTags}
+              onTagClick={handleTagClick}
+            />
+          </div>
+        )}
+
+        {/* Active Tags Display */}
+        {filters.activeTags && filters.activeTags.length > 0 && (
+          <div className="mb-6 px-1">
+            <ActiveTagsDisplay
+              tags={filters.activeTags}
+              onRemoveTag={handleRemoveTag}
+              onClearAll={handleClearTags}
+            />
           </div>
         )}
 
@@ -1086,7 +1190,7 @@ export default function HomePage() {
             <p className="text-gray-600">
               {filters.search?.trim() ? (
                 <>
-                  <span className="font-medium">{jobs.length}</span> results found for 
+                  <span className="font-medium">{jobs.length}</span> results found for
                   <span className="font-medium text-blue-600 ml-1">&ldquo;{filters.search.trim()}&rdquo;</span>
                 </>
               ) : (

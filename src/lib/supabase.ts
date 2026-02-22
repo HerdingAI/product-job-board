@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { env } from './env'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_anon_key'
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Create client with fallback values for demo mode
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
